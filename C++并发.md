@@ -22,7 +22,7 @@ C++编辑注意事项：
 
 #### 1.1.1 并发的途径
 
-- 多进程并发：相当于两个程序员分别在两·个办公室办公![image-20220715174947286](C:\Users\ewigk\AppData\Roaming\Typora\typora-user-images\image-20220715174947286.png)
+- 多进程并发：相当于两个程序员分别在两·个办公室办公![image-20220715174947286](.\images\image-20220715174947286.png)
 
   优点：
 
@@ -40,7 +40,7 @@ C++编辑注意事项：
 
   ​	3C++标准中并没有提供对进程间通信的原生支持，需要平台的相关API，降低可移植性。
 
-- 多线程并发：相当于两个程序员在同一个办公室的两台电脑上办公![image-20220715175005245](C:\Users\ewigk\AppData\Roaming\Typora\typora-user-images\image-20220715175005245.png)
+- 多线程并发：相当于两个程序员在同一个办公室的两台电脑上办公![image-20220715175005245](.\images\image-20220715175005245.png)
 
   每个线程相互独立运行，且线程可以在不同的指令序列中运行。进程中的所有线程都共享地址空间，并且所有线程访问到大部分数据———全局变量仍然是全局的，指针、对象的引用或数据可以在线程之间传递。
 
@@ -1034,7 +1034,7 @@ T parallel_accumulate(Iterator first,Iterator last,T init){
 
 - 退出(Exit) ︰该线程运行结束，等待父线程回收其控制块资源（不包含堆区资源）。
 
-  ![image-20220717212857603](C:\Users\ewigk\AppData\Roaming\Typora\typora-user-images\image-20220717212857603.png)
+  ![image-20220717212857603](.\images\image-20220717212857603.png)
 
 
 
@@ -2092,7 +2092,7 @@ int main() {
 - 但光是这样在每一个 `std::shared_future` 的独立对象上成员函数调用返回的结果还是不同步的，所以为了在多个线程访问一个独立对象时，避免数据竞争，必须使用锁来对访问进行保护。
 - 优先使用的办法：为了替代只有一个拷贝对象的情况，可以让每个线程都拥有自己对应的拷贝对象。
 
-![image-20220729024746467](C:\Users\ewigk\AppData\Roaming\Typora\typora-user-images\image-20220729024746467.png)
+![image-20220729024746467](.\images\image-20220729024746467.png)
 
 `std::shared_future` 的实例同步 `std::future` 实例的状态。当 `std::future` 对象没有与其他对象共享同步状态所有权，那么所有权必须使用 `std::move` 将所有权**传递**到 `std::shared_future` ：
 
