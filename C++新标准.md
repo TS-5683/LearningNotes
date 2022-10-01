@@ -837,7 +837,8 @@ int main() {
 
 ```c++
 std::vector <int> foo() {
-    std::vector<int> temp = { 1,2，3,4 };return temp;
+    std::vector<int> temp = { 1,2，3,4 };
+    return temp;
 }
 std::vector<int> v = foo();
 ```
@@ -914,8 +915,7 @@ void foo() {
 
 传统 C++ 通过拷贝构造函数和赋值操作符为类对象设计了拷贝/复制的概念，但为了实现对资源的移动操作，调用者必须使用先复制、再析构的方式，否则就需要自己实现移动对象的接口。这就像是把所有东西新买了一份到新家再把原来的东西全扔掉，很反人类。
 
-传统的 C++ 没有区分『移动』和『拷贝』的概念，造成了大量的数据拷贝，浪费时间和空间。右值
-引用的出现恰好就解决了这两个概念的混淆问题
+传统的 C++ 没有区分『移动』和『拷贝』的概念，造成了大量的数据拷贝，浪费时间和空间。右值引用的出现恰好就解决了这两个概念的混淆问题
 
 ```c++
 #include <iostream >
@@ -1040,5 +1040,47 @@ foo(arr.data(), arr.size());
 
 std::forward_list 是一个列表容器，使用方法和 std::list 基本类似,使用单向链表进行实现，当不需要双向迭代时，具有比 std::list 更高的空间利用率。
 
-### 无序容器
+### std::priority_queue
+
+头文件：queue
+
+C++中优先队列是用数据结构中的堆来实现的，与普通队列先入先出的性质不同，优先队列中是每进入一个新元素，队列内部会按照规则重新排序，最终使得优先级最高的元素总是在队首。在C++中默认为大顶堆，即数值越大优先级越高，当然也可以通过重载运算符和重写仿函数来修改优先级比较规则。
+
+```c++
+//和队列基本操作相同:
+top() 访问队头元素
+empty() 队列是否为空
+size() 返回队列内元素个数
+push() 插入元素到队尾 (并排序)
+emplace() 原地构造一个元素并插入队列
+pop() 弹出队头元素
+swap() 交换内容
+    
+//定义：
+priority_queue<Type, Container, Functional>;
+	// Type: 数据类型
+	// Container：容器类型（Container必须是用数组实现的容器，比如vector,deque
+	// Functional 比较的方式
+	//方式一
+		priority_queue<int> pq;
+	//方式二
+		priority_queue<int,vector<int>,greater<int>> pq;//升序排列
+		priority_queue<int,vector<int>,less<int>> pq;//降序排列
+
+//使用基本数据类型时，只需要传入数据类型，默认是大顶堆。
+priority_queue<int> a; 
+```
+
+以自定义类型作为元素时需要对该类型重载<运算符或重载greater或less函数
+
+```C++
+struct node {
+    int x;
+    int y;
+    friend bool operator < (node n1,node n2) {//重载运算符
+        return n1.x > n2.x; //x越小优先级越高，如果是<,则相反
+    }
+};
+priority_queue<node> pq;
+```
 
