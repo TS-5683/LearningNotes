@@ -941,6 +941,8 @@ explain select * from table1 where substring(phone_num,10,2) = '00';
 
 or条件时，or连接的两个列都有各自的索引时用到索引，只有一个列有索引是不会用到索引。
 
+索引自适应：大多数行满足条件，则不走查询。换句话说，mysql评估使用和不适用索引时的效率来从优选择。
+
 ### 6.4.3 or连接的条件
 
 若or前的条件中的列有索引，而后面的没有，那么涉及到的索引不会被用到。
@@ -958,12 +960,12 @@ select column_list from table_name_ force index(index_name) where ...;
 
 ### 6.4.5覆盖索引
 
-尽量使得需要返回的列在该所以中已经能全部找到。
+尽量使得需要返回的列在该所引中已经能全部找到。
 
 查询计划中显示：
 
 - using index condition: 查找使用了索引但是需要回表查询
-- using where; using index: 查找使用了索引，但是血压的数据都在索引列中能找到→不需要回表查询→效率更高
+- using where; using index: 查找使用了索引，但是需要的数据都在索引列中能找到→不需要回表查询→效率更高
 
 ### 6.4.6前缀索引
 
