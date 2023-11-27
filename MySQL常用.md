@@ -908,7 +908,7 @@ explain select * from table_name_;
 | ------------ | ------------------------------------------------------------ |
 | id           | select查询的序列号，表示查询中执行select子句或者是操作表的顺序(id相同，执行顺序从上到下;id不同，值越大，越先执行)。 |
 | select_type  | 表示SELECT的类型，常见的取值有SIMIPLE(简单表，即不使用表连接或者子查询)、PRIMARY(主查询，即外层的查询)、UNION  （UNION中的第二个或者后面的查询语句)、SUBQUERY (SELECT/WHERE之后包含了子查询）等 |
-| **type**     | 表示连接类型，性能由好到差的连接类型为NULL、system、const、 eq_ref、ref、range、index、alt 。 |
+| **type**     | 表示连接类型，性能由好到差的连接类型为NULL、system、const、 eq_ref、ref、range、index、all 。 |
 | posiible_key | 显示可能应用在这张表上的索引，一个或多个。                   |
 | **key**      | 实际使用的索引，NULL表示没有使用索引                         |
 | **key_len**  | 表示索引中使用的字节数，该值为索引字段最大可能长度，并非实际使用长度，在不损失精确性的前提下，长度越短越好 |
@@ -932,6 +932,14 @@ explain select * from table_name_;
 explain select * from table1 where substring(phone_num,10,2) = '00';
 # type字段显示为all，效率很低
 ```
+
+字符串不加单引号存在隐式转换，字符串列上的索引失效。
+
+模糊匹配中，如果模糊的部分不包括字符串的开头，那就能够使用索引。因为字符串的大于小于比较只看第一个字符的（当然了，第一个相同再看第二个……）
+
+联合索引的列不包括条件的列时不用到索引。
+
+or条件时，or连接的两个列都有各自的索引时用到索引，只有一个列有索引是不会用到索引。
 
 ### 6.4.3 or连接的条件
 
