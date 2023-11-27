@@ -831,6 +831,7 @@ show engines;
 create [unique / fulltext] index index_name on table_name_ (index_column_name,...);
 # 关联多个字段→单列索引
 # 关联多个字段→联合索引
+# 中括号中不添加关键字则为常规索引。没有创建索引则查询时使用全表扫描，效率低下
 ```
 
 #### 6.2.2.2 查看索引
@@ -847,16 +848,16 @@ drop index index_name on table_name_;
 
 ## 6.3 SQL 性能分析
 
-### 6.3.1 SQL执行频率
+### 6.3.1 SQL执行频数
 
 ```mysql
 # 查看当前数据库的各类操作的次数
-show global/session status kike 'Com_______';  # 七个‘_’表示7个字符，即_select、_delete、_update等
+show global/session status like 'Com_______';  # 七个‘_’表示7个字符，即_select、_delete、_update等
 ```
 
 ### 6.3.2 慢查询日志
 
-记录所有执行时间超过指定参数（默认为10秒）的所有SQL语句的日志。默认没有开启，需要在MySQL配置文件（\etc/my.cnf）中配置
+记录所有执行时间超过指定参数（默认为10秒）的所有SQL语句的日志。默认没有开启，需要在MySQL配置文件（linux系统中为：/etc/my.cnf）中配置
 
 ```mysql
 # 查看当前慢查询日志开关的状态
@@ -865,9 +866,11 @@ show variables like 'show_query_log';
 #以下需要在MySQL配置文件（\etc/my.cnf）中配置
 # 开启MySQL慢查询日志开关
 show_query_log = 1
-# 设置日至时间
+# 设置慢查询的时间定义（以秒为单位）
 long_query_time = t
 ```
+
+在Linux系统中，mysql的慢查询日志存放在/var/lib/mysql
 
 ### 6.3.3 profile详情
 
@@ -880,6 +883,8 @@ select @@have_profiling;
 select @@profiling;
 # 开/关profile
 set profiling = 1/0;
+
+# 可以添加关键字session、global
 
 # 查看每一条SQL语句及其耗时
 show frofiles;
@@ -916,6 +921,8 @@ explain select * from table_name_;
 ### 6.4.1 最左前缀法则
 
 如果使用了多列（联合索引），查询总索引的最左列开始，并且不跳过中间的列。如果跳过了中间的某一列索引将部分失效（后面的索引失效）。
+
+对于联合索引，如果查询中出现了范围查询，则范围查询右侧的列索引将失效。
 
 ### 6.4.2 索引列运算
 
