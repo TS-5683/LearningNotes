@@ -1269,10 +1269,34 @@ end if;
 | INOUT | 既可以作为输入参数，也可以作为输出参数      |      |
 
 ```mysql
-create procedure 过程名([in/out/inout 参数名 参数类型])
+create procedure 过程名([in/out/inout 参数名 数据类型])
 begin
 	...
 end;
+
+
+create procedure proc1(in score int, out res varchar(10))
+begin
+	if score >= 85 then
+		set res := '优秀';
+	elseif score >= 60 then
+		set res := '及格';
+	else
+		set res := '不及格';
+	end if;
+end;
+
+create procedure proc2(inout score int)
+begin
+	set score := score / 2;
+end;
+
+set @score = 198;
+call proc2(@score);
+select @score;
+
+call proc1(68, @result);
+select @result;
 ```
 
 ### 8.1.6 case
@@ -1290,7 +1314,7 @@ end case;
 
 ```mysql
 case 
-	when 表达式1 then
+	when 表达式1 then  # 表达式1、表达式2都是表示条件的语句，都是当表达式成立时执行对应的语句
 		...
 	when 表达式2 then
 		...
@@ -1305,6 +1329,20 @@ end case;
 while condition1 do
 	...
 end while;
+
+
+create procedure proc1(in n int, out tal int)
+begin
+	declare total int default 0;
+	while n > 0 do
+		set total := total + n;
+		set n := n - 1;
+	end while;
+	set tal := total;
+end;
+
+call proc1(5, @res);
+select @res;  # @res 这一个变量可以在调用过程之前声明，也可以不声明直接调用。
 ```
 
 ### 8.1.8 repeat
