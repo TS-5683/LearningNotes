@@ -24,6 +24,7 @@ for imgName in imgList:
     for file in fileList:
         if inFile(imgName, file):
             flag = True
+            break
     if not flag:
         print('删除图片：'+imgName)
         os.remove('images\\'+imgName)
