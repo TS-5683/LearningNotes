@@ -1354,11 +1354,22 @@ repeat
 	...
 	until condition
 end repeat;
+
+create procedure proc1(in n int, out tal int)
+begin
+	declare total int default 0;
+	repeat
+		set total := total + n;
+		set n := n - 1;
+	until n <= 0;
+	end repeat;
+	set tal := total;
+end;
 ```
 
 ### 8.1.9 loop
 
-LOOP实现简单的循环，如果不在sQL逻辑中增加退出循环的条件，可以用其来实现简单的死循环。LOoP可以配合一下两个语句使用：
+LOOP实现简单的循环，如果不在SQL逻辑中增加退出循环的条件，可以用其来实现简单的死循环。LOOP可以配合一下两个语句使用：
 
 - LEAVE:配合循环使用,退出循环。（break）
 - ITERATE:必须用在循环中，作用是跳过当前循环剩下的语句，直接进入下一次循环。（continue）
@@ -1378,6 +1389,7 @@ begin
 		if n<=0 then
 			leave sum1;
 		end if;
+		
 		set total := total + n;
 		set n := n - 1;
 	end loop sum1;
@@ -1410,7 +1422,7 @@ end;
 
 ### 8.1.10 游标
 
-游标、(CURSOR）是用来存储查询结果集的数据类型,在存储过程和函数中可以使用游标对结果集进行循环的处理。
+游标、(CURSOR）是用来存储查询结果集的数据类型，在存储过程和函数中可以使用游标对结果集进行循环的处理。
 
 游标的使用包括游标的声明、OPEN、FETCH和CLOSE。
 
@@ -1456,6 +1468,7 @@ begin
 	declare upro varchar(20);
 	declare u_cursor for select name, profession from tb_user where age <= uage;
 	declare exit handler for sqlstate '02000' close u_cursor;
+	# 如果没有声明handler，运行会报错，因为循环是死循环，当游标中没有数据之后fetch就会报错
 	
 	drop table if exists tb_user_pro;
 	create table tb_user_pro(
@@ -1543,7 +1556,7 @@ create table user_log(
     ope_time datetime not null comment '操作时间',
     ope_id int(11) not null comment '操作的数据的id',
     ope_params varchar(500) comment '操作参数'
-)
+)comment '操作日志表';
 
 create trigger tb_user_insert_trigger
 	after insert on tb_user for each row
@@ -1582,6 +1595,16 @@ use db01
 unlock tables;  # 解锁
 ```
 
+弊端：
+
+如果在主库上备份，则备份期间不能执行更新，业务基本上停摆；从库上备份是，备份期间从库不能执行主库同步过来的二进制日志，会导致只从延迟。
+
+InnoDB中可以在备份时加上参数 --single-transaction 来实现不加锁的一致性数据备份。
+
+```
+mysqldump --single-transaction -uroot -p123456 db01 > db01.sql
+```
+
 ## 11.2表级锁
 
 表级锁，每次操作锁住整张表。锁定粒度大，发生锁冲突的概率最高，并发度最低。应用在MyISAM、InnoDB、BDB等存储引擎中。
@@ -1594,8 +1617,8 @@ unlock tables;  # 解锁
 
 ### 11.2.1表锁 
 
-- 表共享读锁（read lock）：加锁之后其他客户端只能读
-- 表独占写锁（write lock）：加锁之后其他客户端不可读不可写
+- 表共享读锁（read lock）：加锁之所有他客户端只能读
+- 表独占写锁（write lock）：加锁之后其他客户端不可读不可写，本客户端可以读写
 
 ```mysql
 # 加锁
@@ -1606,7 +1629,7 @@ unlock tables; / 客户端断开连接自动解锁
 
 ### 11.2.2 元数据锁
 
-MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。MDL锁主要作用是维护表元数据的数据一致性，在表上有活动事务的时候，不可以对元数据进行写入操作。
+MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。MDL锁主要作用是维护表结构，在表上有活动事务的时候，不可以对表结构进行修改。
 
 在MySQL5.5中引入了MDL，当对一张表进行增删改查的时候，加MDL读锁(共享);当对表结构进行变更操作的时候，加MDL写锁(排他)。
 
@@ -1615,11 +1638,11 @@ MDL加锁过程是系统自动控制，无需显式使用，在访问一张表�
 | lock tables xxx read / write                     | SHARED_READ_ONLY /  SHARED_NO_READ_WRITE |                                                  |
 | select . select ... lock in share mode           | SHARED_READ                              | 与SHARED_READ、SHARED_WRITE兼容，与EXCLUSIVE互斥 |
 | insert . update、 delete、select ... for  update | SHARED_WRITE                             | 与SHARED_READ、SHARED_WRITE兼容,与EXCLUSIVE互斥  |
-| alter table ...                                  | EXCLUSIVE                                | 与其他的MDL都互斥                                |
+| alter table ...                                  | EXCLUSIVE（排它锁）                      | 与其他的MDL都互斥                                |
 
 ### 11.2.3 意向锁
 
-为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，使得表锁不用检查每行数据是否加锁，使用意向锁来减少表锁的检查。
+为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，使得表锁不用检查每行数据是否加锁，使用意向锁来减少表锁的检查。当一个行锁锁定一行数据后会对表加一个意向锁，另一个线程要加表锁时就会检查意向锁是否兼容，来判断是否能够枷锁成功。
 
 - 意向共享锁（IS）：由语句select...lock in share mode添加。与表锁共享锁( read)兼容，与表锁排它锁( write）互斥。
 - 意向排他锁（IX）：由insert、update、delete、select...for update添加。与表锁共享锁( read）及排它锁(write）都互斥。意向锁之间不会互斥。
@@ -1627,7 +1650,6 @@ MDL加锁过程是系统自动控制，无需显式使用，在访问一张表�
 ```mysql
 # 查看当前数据库意向锁、行所的加锁情况
 select object_schema, object_name, index_name, lock_type, lock_mode, lock_data from performance_schema.data_locks;
-
 ```
 
 ## 11.3行级锁
