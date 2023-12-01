@@ -1832,11 +1832,13 @@ MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维�
 
 2. undo log
 
-   回滚日志，在insert、update、delete的时候产生的便于数据回滚的日志。
+   回滚日志，在insert、update、delete的时候产生的便于数据回滚的日志；其记录往往与之前的操作是相反的（即原操作是改过来，undo log中的记录就是改回去）。
    当insert的时候，产生的undo log日志只在回滚时需要，在事务提交后，可被立即删除。
    而update、delete的时候，产生的undo log日志不仅在回滚时需要，在快照读时也需要，不会立即被删除。 
 
    undo log 版本链：不同事务或相同事务对同一条记录进行修改，会导致该记录的undolog生成一条记录版本链表，链表的头部是最新的旧记录，链表尾部是最早的旧记录。
+
+   ![image-20231201154045319](./images/image-20231201154045319.png)
 
 3. readview
 
@@ -1849,12 +1851,16 @@ MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维�
    | max_trx_id     | 预分配事务ID，当前最大事务ID+1（因为事务ID是自增的） |
    | creator_trx_id | ReadView创建者的事务ID                               |
 
+   相当于一个视图生成的同时规定了谁能读。
+
    ![image-20220427181811105](.\images\image-20220427181811105.png)
 
    不同隔离级别，生成readview的时机不同：
-
+   
    READ COMMITTED:在事务中每一次执行快照读时生成ReadView.
    REPEATABLE READ:仅在事务中第一次执行快照读时生成ReadView，后续复用该ReadView.
+   
+   ![image-20231201155401573](./images/image-20231201155401573.png)
 
 # 13 MySQL 管理
 
@@ -1893,7 +1899,8 @@ mysqladmin是一个执行管理操作的客户端程序。可以用它来检查�
 
 ```mysql
 # 语法例如：
-mysqladmin -uroot -p123456 drop 'test01 ';
+mysqladmin --help  # 帮助手册
+mysqladmin -uroot -p123456 drop 'test01 ';  # 不用登录，执行完了就退出
 mysqladmin-uroot -p123456 version;
 ```
 
@@ -1902,6 +1909,10 @@ mysqladmin-uroot -p123456 version;
 由于服务器生成的二进制日志文件以二进制格式保存，所以如果想要检查这些文本的文本格式，就会使用到mysqlbinlog日志管理工具。
 
 ![image-20220427185929965](.\images\image-20220427185929965.png)
+
+``` bash
+mysqlbinlg [option] binlogfilename
+```
 
 ### 13.2.4 mysqlshow
 
@@ -2004,15 +2015,10 @@ long_query_time = 2
 
 MySQL支持一台主库同时向多台从库进行复制，从库同时也可以作为其他从服务器的主库，实现链状复制。
 
-
-
 MySQL复制的有点主要包含以下三个方面:
-
 - 主库出现问题，可以快速切换到从库提供服务。
 - 实现读写分离，降低主库的访问压力。
 - 可以在从库中执行备份,以避免备份期间影响主库服务。34 
-
-
 
 ## 15.1 复制的原理：
 
@@ -2022,8 +2028,6 @@ MySQL复制的有点主要包含以下三个方面:
 1. 从库读取主库的二进制日志文件 Binlog，写入到从库的中继日志Relay Log 。
 1. slave重做中继日志中的事件，将改变反映它自己的数据。
 
-
-
 ## 15.2 主从复制的搭建
 
 ### 15.2.1 服务器准备
@@ -2031,8 +2035,6 @@ MySQL复制的有点主要包含以下三个方面:
 至少两台服务器→开放端口号或关闭防火墙
 
 ![image-20220428215106044](.\images\image-20220428215106044.png)
-
-
 
 ### 15.2.2 主库配置
 
@@ -2096,15 +2098,11 @@ read-only = 1
 
 super-read-only  可以设置超级管理员的读写权限
 
-
-
 重启mysql服务
 
 ```mysql
 systemctl restart mysqld
 ```
-
-
 
 登录mysql，设置主库配置
 
@@ -2123,8 +2121,6 @@ CGHNGE MASTER TO MASTER HOST-kx.osc..x , NASTER USER=.xo , NASTER PASSWORD=.o'�
 | SOURCE_LOG_FILE | binlog日志文件名   | MASTER_LOG_FILE |
 | SOURCE_LOG_POS  | binlog日志文件位置 | MASTER_LOG_POS  |
 
-
-
 开启同步操作
 
 ```mysql
@@ -2132,15 +2128,12 @@ start replica ; #8.0.22之后
 start slave ;  #8.0.22之前
 ```
 
-
-
 查看主从同步状态
 
 ```mysql
 show replica status;   # 8.0.22 之后
 show slave status;     # 8.0.22 之前
 ```
-
 
 
 # 16 分库分表
