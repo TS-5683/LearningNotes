@@ -1689,9 +1689,9 @@ lnnoDB实现了以下两种类型的行锁:
 
 - 索引上的等值查询(唯一索引)，给不存在的记录加锁时,优化为间隙锁。
 - 索引上的等值查询(普通索引)，向右遍历时最后一个值不满足查询需求时，next-key lock退化为间隙锁。
-- 索引上的范围查询(唯一索引)--会访问到不满足条件的第一个值为止。
+- 索引上的范围查询(唯一索引)--会访问到不满足条件的第一个值为止。是临键锁。
 
-临键锁：锁住两条数据之间的间隙，此时在这个间隙里插入数据会被阻塞。
+临键锁：锁住两条数据及其之间的间隙，此时在这个间隙里插入数据会被阻塞。
 
 间隙锁唯一目的是防止其他事务插入间隙。间隙锁可以共存，一个事务采用的间隙锁不会阻止另一个事务在同一间隙上采用间隙锁。
 
@@ -1707,37 +1707,31 @@ lnnoDB实现了以下两种类型的行锁:
 - 页，是InnoDB存储引擎磁盘管理的最小单元，每个页的大小默认为16KB。为了保证页的连续性，InnoDB存储引擎每次从磁盘申请4-5个区。
 - 行，lnnoDB存储引擎数据是按行进行存放的。
 
-
-
-## 12.2 架构
+## 12.2 内存架构
 
 ### 12.2.1 缓冲池
 
-缓冲池：数据的增删改查发生在挨内存中的缓冲区，之后再以一定频率刷到磁盘
+缓冲池（buffer pool）：数据的增删改查发生在内存中的缓冲区，之后再以一定频率刷到磁盘以减少磁盘IO（毕竟磁盘IO是比较耗费时间的）
 
-缓冲池以Page页为单位，底层采用链表数据结构管理Page。根据状态，将Page分为三种类型:
+缓冲池以Page页为单位，底层采用链表数据结构管理Page。根据状态，将Page分为三种类，型:
 
 ​	free page:空闲page，未被使用。
 ​	clean page:被使用page，数据没有被修改过。
-​	dirty page:脏页，被使用page，数据被修改过，也中数据与磁盘的数据产生了不一致。
-
-
+​	dirty page:脏页，被使用page，数据被修改过，其中数据与磁盘的数据产生了不一致。
 
 ### 12.2.2 更改缓冲区
 
-Change Buffer:更改缓冲区（针对于非唯一二级索引页)，在执行DML语句时，如果这些数据Page没有在Buffer Pool中，不会直接操作磁盘，而会将数据变更存在更改缓冲区Change Buffer中，在未来数据被读取时，再将数据合并恢复到Buffer Pool中，再将合并后的数据刷新到磁盘中。
-
-
+Change Buffer:更改缓冲区（针对于非唯一二级索引页)，在执行DML语句时，如果这些数据Page没有在Buffer Pool中，不会直接操作磁盘，而会将数据变更存在更改缓冲区Change Buffer中，在未来数据被读取时，再将数据合并恢复到Buffer Pool中，再将合并后的数据刷新到磁盘中，减少磁盘IO。
 
 ### 12.2.3 自适应哈希索引
+
+InnoDB引擎并不支持哈希索引，但是：
 
 Adaptive Hash Index:自适应hash索引，用于优化对Buffer Pool数据的查询。InnoDB存储引擎会监控对表上各索引页的查询，如果观察到hash索引可以提升速度，则建立hash索引，称之为自适应hash索引。
 
 ```mysql
 # 参数：adaptive_hash_index
 ```
-
-
 
 ### 12.2.4 日志缓冲区
 
@@ -1751,20 +1745,33 @@ innodb_flush_log_at_trx_commit  #日志刷新到磁盘时机
 	2:日志在每次事务提交后写入，并每秒刷新到磁盘一次。
 ```
 
+### 12.2.5 磁盘结构
 
+系统表空间（system tablespace）：更改缓冲区的存储区域。如果表时在系统表空间而不是每个表文件空间或通用表空间中创建的，可能还包含表和索引数据。参数：innodb_data_file_path。
+
+每一张表的表空间（file-per-table tablespaces）：每个表的文件包含单个innodb表的数据和索引，并存储在文件系统上的单个数据文件中。参数：innodb_file_per_table。
+
+通用表空间（genetal tablespaces）：需要使用create tablespace语句创建，可在创建时制定该表空间。
+
+```mysql
+create table table_name(column list) engine = innodb tablespace file_name;
+# 在通用空间‘file_name.idb’中创建一张表
+```
+
+撤销表空间（undo tablespaces）：用于存储undo log，mysql实例在初始化时会自动创建两个默认的undo表空间（初始大小为16M）。
+
+临时表空间（temporary tablespaces）：用于存储用户创建的临时表。
+
+双写缓冲区（doublewrite buffer files）：从buffer poll刷新到磁盘前，先写入其中，便于系统异常时恢复。
 
 ## 12.3 事务原理
 
 ![image-20220426210127175](.\images\image-20220426210127175.png)
 
-
-
 ### 12.3.1 redolog 与事务的持久性
 
 重做日志，记录的是事务提交时数据页的物理修改，是用来实现事务的持久性。
 该日志文件由两部分组成﹔重做日志缓冲(redo log buffer)以及重做日志文件(redo log file) ,前者是在内存中，后者在磁盘中。当事务提交之后会把所有修改信息都存到该日志文件中,用于在刷新脏页到磁盘,发生错误时,进行数据恢复使用。
-
-
 
 ### 12.3.2 undo log 与事务的原子性
 
@@ -1773,15 +1780,11 @@ undo log和redo log记录物理日志不一样，它是逻辑日志。可以认�
 Undo log销毁: undo log在事务执行时产生，事务提交时，并不会立即删除undo log，因为这些日志可能还用于MVC
 Undo log存储: undo log采用段的方式进行管理和记录，存放在前面介绍的 rollback segment 回滚段中，内部包含1024个undo logsegment。
 
-
-
 ## 12.4 MVCC→多版本并发控制
 
 ### 12.3.0 基本概念
 
 当前读：读取的是记录的最新版本，读取时还要保证其他并发事务不能修改当前记录，会对读取的记录进行加锁。对于我们日常的操作，如：select ... lock in share mode(共享锁)，select ... for update、update、insert、delete(排他锁)都是一种当前读.
-
-
 
 快照读：简单的select (不加锁）就是快照读，快照读，读取的是记录数据的可见版本，有可能是历史数据，不加锁，是非阻塞读。
 
@@ -1789,11 +1792,7 @@ Undo log存储: undo log采用段的方式进行管理和记录，存放在前�
 - Repeatable Read:开启事务后第一个select语句才是快照读的地方。
 - Serializable:快照读会退化为当前读。
 
-
-
 MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维护一个数据的多个版本，使得读写操作没有冲突，快照读为MySQL实现MVCC提供了一个非阻塞读功能。MCC的具体实现，还需要依赖于数据库记录中的三个隐式字段、undo log日志、readView。
-
-
 
 ### 12.3.1 实现原理
 
@@ -1844,8 +1843,6 @@ MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维�
 | performance_schema | 为MySQL服务器运行时状态提供了一个底层监控功能，主要用于收集数据库服务器性能参数 |
 | sys                | 包含了一系列方便 DBA和开发人员利用performance_schema性能数据库进行性能调优和诊断的视图 |
 
-
-
 ## 13.2 常用工具
 
 ## 13.2.1 mysql
@@ -1866,8 +1863,6 @@ mysql [options] [database]
 mysql -h 192.168.200.202 -u root -p 1234 itcast -e "select * from stu"
 ```
 
-
-
 ### 13.2.2 mysqladmin
 
 mysqladmin是一个执行管理操作的客户端程序。可以用它来检查服务器的配置和当前状态、创建并删除数据库等。
@@ -1878,15 +1873,11 @@ mysqladmin -uroot -p123456 drop 'test01 ';
 mysqladmin-uroot -p123456 version;
 ```
 
-
-
 ### 13.2.3 mysqlbinlg
 
 由于服务器生成的二进制日志文件以二进制格式保存，所以如果想要检查这些文本的文本格式，就会使用到mysqlbinlog日志管理工具。
 
 ![image-20220427185929965](.\images\image-20220427185929965.png)
-
-
 
 ### 13.2.4 mysqlshow
 
@@ -1894,15 +1885,11 @@ mysqlshow客户端对象查找工具，用来很快地查找存在哪些数据�
 
 ![image-20220427194908019](.\images\image-20220427194908019.png)
 
-
-
 ### 13.2.5 mysqldump
 
 mysqldump客户端工具用来备份数据厍或在不同数据厍之间进行数据过移。备份内容包含创建表，及插入表的SQL语句。
 
 ![image-20220427200510299](.\images\image-20220427200510299.png)
-
-
 
 ### 13.2.6 mysqlimport/soyrce
 
@@ -1922,8 +1909,6 @@ mysqlimport是客户端数据导入工具，用来导入mysqldump加-T参数后�
 # 查询错误日志存放目录
 show variables like '%log_error%';
 ```
-
-
 
 ## 14.3 二进制日志
 
@@ -1949,13 +1934,9 @@ show variables like '%log_bin%';
 show variables like '%binlog_format%';
 ```
 
-
-
 由于日志是以二进制方式存储的，不能直接读取，需要通过二进制日志查询工具mysqlbinlog来查看
 
 ![image-20220428085850234](.\images\image-20220428085850234.png)
-
-
 
 日志删除
 
@@ -1970,8 +1951,6 @@ show variables like '%binlog_format%';
 ```mysql
 show variables like '%binlog_expire_logs_seconds%';
 ```
-
-
 
 ## 14.2 查询日志
 
