@@ -722,7 +722,7 @@ commit; # 提交
 ### 5.1.2方式2：transaction
 
 ```mysql
-start transaction;
+start transaction;  # 或者使用begin
 
 update account set money = money - 1000 where name = '张三';
 wrong # 这一句并不是sql语句，所以会报错
@@ -1762,34 +1762,58 @@ create table table_name(column list) engine = innodb tablespace file_name;
 
 临时表空间（temporary tablespaces）：用于存储用户创建的临时表。
 
-双写缓冲区（doublewrite buffer files）：从buffer poll刷新到磁盘前，先写入其中，便于系统异常时恢复。
+双写缓冲区（doublewrite buffer files）：从buffer poll刷新到磁盘前，先写入其中，便于系统异常时恢复。.dblwr文件。
+
+重做日志（redo log）：用于实现事务的持久性。由重做日志缓冲（redo log buffer，内存）和重做日志文件（redo log，磁盘文件）组成。事务提交之后会把所有修改信息都存放到改日志文件中，用于在刷新脏页到磁盘是如果发生错误，进行数据恢复。不会永久保存，事务提交之后就没得用了，自然需要清理掉。
+
+### 12.2.6 后台线程
+
+1. master thread：核心后台线程，调度其他线程，将缓冲池中的数据异步刷新到磁盘，保存数据的一致性，还包括脏页的刷新、合并插入缓存、undo页的回收。
+
+2. io thread：InnoDB使用AIO处理IO请求以提高数据库性能。IO thread主要负责IO请求的回调。
+
+   | 线程类型             | 默认个数 | 职责                     |
+   | -------------------- | -------- | ------------------------ |
+   | read thread          | 4        | 读操作                   |
+   | write thread         | 4        | 写操作                   |
+   | log thread           | 1        | 将日志缓冲区刷新到磁盘   |
+   | insert buffer thread | 1        | 将写缓冲区内容刷新到磁盘 |
+
+   ```mysql
+   show engine innodb status;  # 查看引擎状态信息，其中就包含了事务、IO等信息。
+   ```
+
+3. purge thread：用于回收事务已经提交了的undo log。
+4. page cleaner thread：协助master thread刷新脏页到磁盘，可减轻master thread的负荷。
 
 ## 12.3 事务原理
+
+事务特点（ACID）原子性，一致性，隔离性，持久性。
 
 ![image-20220426210127175](.\images\image-20220426210127175.png)
 
 ### 12.3.1 redolog 与事务的持久性
 
 重做日志，记录的是事务提交时数据页的物理修改，是用来实现事务的持久性。
-该日志文件由两部分组成﹔重做日志缓冲(redo log buffer)以及重做日志文件(redo log file) ,前者是在内存中，后者在磁盘中。当事务提交之后会把所有修改信息都存到该日志文件中,用于在刷新脏页到磁盘,发生错误时,进行数据恢复使用。
+该日志文件由两部分组成﹔重做日志缓冲(redo log buffer)以及重做日志文件(redo log file)。修改数据时把操作信息缓冲到缓冲日志；当事务提交时会把所有修改信息存到该日志文件中，再刷新脏页到磁盘，如果脏页刷新发生错误，可以使用redo log进行数据恢复。redo log文件是会自动清理的。
 
 ### 12.3.2 undo log 与事务的原子性
 
 回滚日志，用于记录数据被修改前的信息，作用包含两个:提供回滚和MVCC(多版本并发控制)。
 undo log和redo log记录物理日志不一样，它是逻辑日志。可以认为当delete一条记录时，undo log中会记录一条对应的insert记录，反之亦然，当update一条记录时，它记录一条对应相反的update记录。当执行rollback时，就可以从undo log中的逻辑记录读取到相应的内容并进行回滚。
-Undo log销毁: undo log在事务执行时产生，事务提交时，并不会立即删除undo log，因为这些日志可能还用于MVC
+Undo log销毁: undo log在事务执行时产生，事务提交时，并不会立即删除undo log，因为这些日志可能还用于MVCC。
 Undo log存储: undo log采用段的方式进行管理和记录，存放在前面介绍的 rollback segment 回滚段中，内部包含1024个undo logsegment。
 
 ## 12.4 MVCC→多版本并发控制
 
 ### 12.3.0 基本概念
 
-当前读：读取的是记录的最新版本，读取时还要保证其他并发事务不能修改当前记录，会对读取的记录进行加锁。对于我们日常的操作，如：select ... lock in share mode(共享锁)，select ... for update、update、insert、delete(排他锁)都是一种当前读.
+当前读：读取的是记录的最新版本，读取时还要保证其他并发事务不能修改当前记录，会对读取的记录进行加锁。对于我们日常的操作，如：select ... lock in share mode(共享锁)，select ... for update、update、insert、delete(排他锁)都是一种当前读。
 
 快照读：简单的select (不加锁）就是快照读，快照读，读取的是记录数据的可见版本，有可能是历史数据，不加锁，是非阻塞读。
 
 - Read Committed:每次select，都生成一个快照读。
-- Repeatable Read:开启事务后第一个select语句才是快照读的地方。
+- Repeatable Read:只有开启事务后第一个select语句才是快照读的地方。
 - Serializable:快照读会退化为当前读。
 
 MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维护一个数据的多个版本，使得读写操作没有冲突，快照读为MySQL实现MVCC提供了一个非阻塞读功能。MCC的具体实现，还需要依赖于数据库记录中的三个隐式字段、undo log日志、readView。
@@ -1804,7 +1828,7 @@ MVCC：全称Multi-Version Concurrency Control，多版本并发控制。指维�
 | ----------- | ------------------------------------------------------------ |
 | DB_TRX_ID   | 最近修改事务ID，记录插入这条记录或最后一次修改该记录的事务ID。 |
 | DB_ROLL_PTR | 回滚指针，指向这条记录的上一个版本，用于配合undo log，指向上一个版本。 |
-| DB_ROW_ID   | 隐藏主键，如果表结构没有指定主键,将会生成该隐藏字段。        |
+| DB_ROW_ID   | 隐藏主键，如果表结构没有指定主键，将会生成该隐藏字段。       |
 
 2. undo log
 
@@ -2152,8 +2176,6 @@ show slave status;     # 8.0.22 之前
 - 所有表的并集是全量数据
 
 #### 16.0.2.2水平拆分
-
-![image-20220429110200959](.\images\image-20220429110200959.png)
 
 水平分库：以字段为依据，按照一定策略，将一个库的数据拆分到多个库中。特点：
 
