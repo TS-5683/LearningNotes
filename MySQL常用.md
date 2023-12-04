@@ -1979,7 +1979,7 @@ show variables like '%binlog_format%';
 | 指令                                              | 含义                                                         |
 | ------------------------------------------------- | ------------------------------------------------------------ |
 | reset master                                      | 删除全部binlog日志，删除之后，日志编号，将从 binlog.000001重新开始 |
-| purge master logs to 'binlon ***实**\|            | 删除******编号之前的所有日志                                 |
+| purge master logs to 'binlon.xxx                  | 删除xxx编号之前的所有日志                                    |
 | purge master logs before 'yyyy-mm-dd  hh24:mi:ss' | 删除日志为"yyyy-mm-dd hh24:mi:ss"之前产生的所有日志          |
 
 也可以在mysql的配置文件中配置二进制日志的过期时间，设置了之后，二进制日志过期会自动删除。
@@ -1990,14 +1990,17 @@ show variables like '%binlog_expire_logs_seconds%';
 
 ## 14.2 查询日志
 
-查询日志中记录了客户端的所有操作语句，而二进制日志不包含查询数据的SQL语句。默认情况下
-查询日志是未开启的。
+查询日志中记录了客户端的所有操作语句，而二进制日志不包含查询数据的SQL语句。默认情况下查询日志是未开启的。
+
+查询日志记录的内容：所有增删改查。
+
+```mysql
+show varible like '%general%';
+```
 
 相关系统变量：general_log(默认为off)、general_log_file(文件目录)
 
 ![image-20220428092742335](.\images\image-20220428092742335.png)
-
-
 
 ## 14.3 慢查询日志
 
@@ -2008,6 +2011,7 @@ show variables like '%binlog_expire_logs_seconds%';
 show_query_log = 1
 # 执行时间参数
 long_query_time = 2
+# （每次更改配置之后都需要重启mysql服务才能生效）
 ```
 
 # 15 主从复制
