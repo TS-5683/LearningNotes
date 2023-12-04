@@ -2020,9 +2020,9 @@ long_query_time = 2
 
 MySQL支持一台主库同时向多台从库进行复制，从库同时也可以作为其他从服务器的主库，实现链状复制。
 
-MySQL复制的有点主要包含以下三个方面:
+MySQL复制的优点主要包含以下三个方面:
 - 主库出现问题，可以快速切换到从库提供服务。
-- 实现读写分离，降低主库的访问压力。
+- 实现读写分离（例如增删改主库负责，查询从库负责），降低主库的访问压力。
 - 可以在从库中执行备份,以避免备份期间影响主库服务。34 
 
 ## 15.1 复制的原理：
@@ -2050,7 +2050,7 @@ MySQL复制的有点主要包含以下三个方面:
 server-id=1
 
 #是否只读,1代表只读,0代表读写
-read-only=O
+read-only=0
 
 #忽略的数据,指不需要同步的数据库
 #binlog-ignore-db=mysql
@@ -2061,7 +2061,7 @@ read-only=O
 
 重启MySQL服务器
 
-```mysql
+```bash
 systemctl restart mysql
 ```
 
@@ -2094,11 +2094,13 @@ hinlog ignore_dh：指定不需要同步的数据库
 
 修改配置文件 /etc/my.cnf
 
-```mysql
+```
 #mysql服务ID，保证整个集群环境中唯一，取值范围:1-232-1，和主库不一样即可
 server-id=2
-#是否只读,1代表只读,0代表读写
-read-only = 1
+#是否只读,1代表只读,0代表读写。但是这个只针对于普通用户
+read-only=1
+# 超级管理员的制度权限
+super-read-only=1
 ```
 
 super-read-only  可以设置超级管理员的读写权限
@@ -2115,7 +2117,7 @@ systemctl restart mysqld
 CHANGE REPLICATION SOURCE TO SOURCE HOST=-xc.o', SDURCE_USER-o', SOURCE PASSWORD=.xo,SDURCE LOG FLE=-os , SOURCE LOG POS=xxx;
 
 # 如果是8.0.23之前的版本中需要执行：
-CGHNGE MASTER TO MASTER HOST-kx.osc..x , NASTER USER=.xo , NASTER PASSWORD=.o'，MASTER_LOG FLE=xo', MASTER_LOG_POS=xxx;
+CHANGE MASTER TO MASTER HOST-kx.osc..x , NASTER USER=.xo , MASTER PASSWORD=.o'，MASTER_LOG FLE=xo', MASTER_LOG_POS=xxx;
 ```
 
 | 参数名          | 含义               | 8.0.23之前      |
@@ -2151,13 +2153,17 @@ show slave status;     # 8.0.22 之前
 
 ​		CPU瓶颈:排序、分组、连接查询、聚合统计等SQL会耗费大量的CPU资源，请求数太多，CPU出现瓶颈.
 
-
-
 ### 16.0.2 拆分策略
 
 ![image-20220429105551407](.\images\image-20220429105551407.png)
 
+分库：把一个主机中数据库中的表分散存放在不同的主机中
+
+分表：把表分开在不同主机存储
+
 #### 16.0.2.1 垂直拆分
+
+![image-20231204105812255](./images/image-20231204105812255.png)
 
 垂直分库：以表为依据，根据业务将不同表拆分到不同库中。特点：
 
@@ -2165,7 +2171,7 @@ show slave status;     # 8.0.22 之前
 - 每个库的数据也不一样
 - 所有库的并集是全量数据
 
-![image-20220429105822341](.\images\image-20220429105822341.png)
+![image-20231204105858843](./images/image-20231204105858843.png)
 
 垂直分表：以字段为依据，根据字段属性将不同字段拆分到不同表。特点：
 
@@ -2174,6 +2180,8 @@ show slave status;     # 8.0.22 之前
 - 所有表的并集是全量数据
 
 #### 16.0.2.2水平拆分
+
+![image-20231204105723311](./images/image-20231204105723311.png)
 
 水平分库：以字段为依据，按照一定策略，将一个库的数据拆分到多个库中。特点：
 
@@ -2189,8 +2197,6 @@ show slave status;     # 8.0.22 之前
 - 每个表的数据不一样
 - 所有表的并集是全量数据
 
-
-
 ### 16.0.3 实现技术
 
 - shardingJDBC:基于AOP原理，在应用程序中对本地执行的SQL进行拦截，解析、改写、路由处理。需要自行编码配置实现，只支持java语言，性能较高。
@@ -2198,8 +2204,6 @@ show slave status;     # 8.0.22 之前
 
 ![image-20220429110757257](.\images\image-20220429110757257.png)
 
-
-
 ## 16.1 Mycat
 
-Mycat是开源的、活跃的、基于Java语言编写的MySQL数据库中间件。可以像使用mysql一样来使用mycat，对于开发人员来说根本感觉不到mycat的存在。
+可以像使用mysql一样来使用mycat，对于开发人员来说是无感知的。
