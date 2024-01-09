@@ -577,18 +577,47 @@ select 字段列表 from 表1 别名1 [left/right] join 表1 别名2 on 过滤�
 
 ### 4.2.2联合查询
 
-union all、union
+联合查询即将两个查询语句的结果一次返回。
+
+#### 4.2.2.1 并集
 
 把多次查询结果合并起来形成一新的查询结果集
 
 ```mysql
 select 字段列表 from 表1...
-union[all]
+union[distinct|all]
 select 字段列表 from 表2...;
 
 # union all 是单纯的把两次查询结果合并
-# union 在 union all 基础上取出重复
+# union 在 union all 基础上去除重复行
 ```
+
+distinct表示对结果集进行去重，all即不去重，默认为distinct。
+
+#### 4.2.2.2 交集
+
+```mysql
+select语句
+intersect [distinct|all]
+select语句
+```
+
+返回两次查询语句结果的都有的行，distinct表示对结果集进行去重，all即不去重，默认为distinct。
+
+#### 4.2.2.3 差集
+
+返回在第一个查询结果集同时不在的哥和查询结果集中的数据。
+
+```mysql
+select语句
+except [distinct|all]
+select语句;
+```
+
+#### 4.2.2.4 注意事项
+
+- 排序要放在最后
+- 运算符优先级：交集运算符优先级高于另外两种
 
 ### 4.2.3子查询
 
@@ -655,6 +684,21 @@ select * from staffs where (job, salary) in (select job,salary from staffs where
 # 查询职位、薪资和鹿杖客或宋远桥相同的员工信息及其部门信息
 select s.*,d.* from (select * from staffs where (job,salary) in (select job,salary from staffs where name in ('鹿杖客','宋远桥'))) s left join divisions d on s.division_id = d.id;
 ```
+
+#### 4.2.3.5 关联子查询
+
+**可以出现在查询列中**
+
+```mysql
+SELECT 
+	*，
+	(SELECT count(*) FROM employee WHERE deptid = d.dept_id)
+FROM department d;
+```
+
+先查询出了部门表中的内容，然后再根据部门信息行去查询部门中的员工数量。
+
+**也可出现在where中**，即条件子查询。
 
 # 5事务
 
@@ -1710,8 +1754,8 @@ lnnoDB实现了以下两种类型的行锁:
 缓冲池以Page页为单位，底层采用链表数据结构管理Page。根据状态，将Page分为三种类，型:
 
     free page:空闲page，未被使用。
-	clean page:被使用page，数据没有被修改过。
-	dirty page:脏页，被使用page，数据被修改过，其中数据与磁盘的数据产生了不一致。
+    clean page:被使用page，数据没有被修改过。
+    dirty page:脏页，被使用page，数据被修改过，其中数据与磁盘的数据产生了不一致。
 
 ### 12.2.2 更改缓冲区
 
@@ -2140,7 +2184,7 @@ show slave status;     # 8.0.22 之前
 单数据库进行数据存储，存在以下性能瓶颈：
 
     IO瓶颈:热点数据太多，数据库缓存不足，产生大量磁盘IO，效率较低。请求数据太多，带宽不够，网络IO瓶颈。
-
+    
     CPU瓶颈:排序、分组、连接查询、聚合统计等SQL会耗费大量的CPU资源，请求数太多，CPU出现瓶颈.
 
 ### 16.0.2 拆分策略
@@ -2203,6 +2247,9 @@ show slave status;     # 8.0.22 之前
 
 - 分组聚合是通过制定字段将数据分成多个窗口，每一个窗口执行聚合函数回一条结果；
 - 开窗函数也是通过指定字段将数据分成多份即多个窗口，但是对每个窗口的每一行执行函数返回结果。
+- 专业窗口函数：rank，dense_rank，row_number等。
+
+### 17.1.1 语法简介
 
 ```mysql
 函数名([参数]) over(partition by [分组字段] order by [排序字段] asc/desc rows/range between 起始位置 and 结束位置)
@@ -2219,3 +2266,74 @@ show slave status;     # 8.0.22 之前
   - unbounded following 边界是分区中的最后一行
   - expr preceding 边界是当前行减去expr的值
   - expr following 边界是当前行加上expr的值。rows是基于行数，range是基于值的大小，到讲解到滑动窗口函数时再详细介绍。
+
+## 17.2 关联子查询
+
+```mysql
+# 先查询出了部门表中的内容，然后再根据部门信息行去员工表查询部门中的员工数量。
+SELECT 
+	*，
+	(SELECT count(*) FROM employee WHERE deptid = d.dept_id)
+FROM department d;
+```
+
+## 17.3 通用表表达式
+
+类似于编程时定义变量，在后续需要使用该值时直接调用该变量即可；WITH语句即给一次查询的结果赋值给一个“变量”或“临时表”，当这一个语句中再次使用这样的查询结果时可以直接以这个变量来调用即可。
+
+```mysql
+with select ……
+as s1
+select …… from s1 where ……;
+```
+
+### 17.3.1 递归查询
+
+## 17.4 字符串列表聚合
+
+group_concat()：把一个序列合并为一个字符串的函数
+
+```mysql
+# 查询到一列邮箱并合并成一个字符串
+select group_concat(email order by email separator '; ');
+```
+
+## 17.5 行转列相关
+
+现有一表中记录学生每一次考试的成绩，字段包括学号、科目、分数，如：
+
+| 学号 | 科目 | 分数 |
+| ---- | ---- | ---- |
+| 1001 | 语文 | 79   |
+| 1002 | 数学 | 50   |
+| 1001 | 数学 | 85   |
+| 1001 | 英语 | 61   |
+| 1002 | 语文 | 90   |
+| 1002 | 英语 | 74   |
+
+现在需要一张表格，表格的一行即为一个学生所有所有科目的成绩
+
+```mysql
+select
+	id,
+	max(case course when '语文' then score else 0 end) as 语文,
+	max(case course when '数学' then score else 0 end) as 数学,
+	max(case course when '英语' then score else 0 end) as 英语
+from score_table;
+```
+
+## 17.6 查询再过滤——HAVING
+
+查询语句中的各种选项的执行顺序不同，where的优先级较having较高，比如在分组统计查询时，如果我们只需要查询出该统计指标符合一定条件的组，那么这一个条件就是在分组之后再判断的，而where会在分组之前就判断，于是需要一个优先级低的判断条件判断——HAVING
+
+```mysql
+select 
+	class,
+	count(*) as count1
+from stus
+having count1 > 50;
+# 查询出学生数量大与50的班级及其学生数量
+```
+
+## 17.7 小计、合计、总计
+
