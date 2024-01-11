@@ -1027,7 +1027,7 @@ select count(distinct email)/count(*) from users_table;
 
 ### 6.4.7建议使用联合索引
 
-当一次查询中有多个查询条件时（condition1 `<u>`and`</u>` condition2……），如果这些字段各自有索引，也只会用到一个索引；当这几个字段在一个联合索引中，则会使用该联合索引，效率更高。
+当一次查询中有多个查询条件时（condition1 `<u>`and `</u>` condition2……），如果这些字段各自有索引，也只会用到一个索引；当这几个字段在一个联合索引中，则会使用该联合索引，效率更高。
 
 ### 6.4.8索引设计原则
 
@@ -1427,7 +1427,7 @@ begin
 		if n<=0 then
 			leave sum1;
 		end if;
-	
+
 		set total := total + n;
 		set n := n - 1;
 	end loop sum1;
@@ -1449,7 +1449,7 @@ begin
 			set n := n - 1;
 			iterate sum2;
 		end if;
-	
+
 		set total := total + n;
 		set n := n - 1;
 	end loop sum2;
@@ -2337,11 +2337,9 @@ having count1 > 50;
 
 ## 17.7 小计、合计、总计
 
-
-
 ## 17.8 字符串查找FIND_IN_SET
 
-`FIND_IN_SET(str, str_list)`，`str_list`是一个以`,`连接的大字符串，`str`是需要查询的子串，找到时返回该字符串的位置（从1开始计数）；如果没有找到，则返回0。
+`FIND_IN_SET(str, str_list)`，`str_list`是一个以 `,`连接的大字符串，`str`是需要查询的子串，找到时返回该字符串的位置（从1开始计数）；如果没有找到，则返回0。
 
 一个案例
 component表
@@ -2351,7 +2349,7 @@ component表
 | 1    | 3,4       |
 | 2    | 5         |
 | 3    | 3         |
-| ……   | ……        |
+| …… | ……      |
 
 active_group表
 
@@ -2360,7 +2358,7 @@ active_group表
 | 3    | 益生菌 |
 | 4    | 益生元 |
 | 5    | 发酵物 |
-| ……   | ……     |
+| …… | ……   |
 
 需要查询返回这样的结果：
 
@@ -2370,7 +2368,7 @@ active_group表
 | 1       | 益生元     |
 | 2       | 发酵物     |
 | 3       | 益生菌     |
-| ……      | ……         |
+| ……    | ……       |
 
 ```mysql
 SELECT c.id, ag.name
@@ -2379,4 +2377,100 @@ JOIN `active_group` ag ON FIND_IN_SET(ag.id, c.`active_group_ids`) > 0
 ORDER BY c.id;
 ```
 
-## 17.9 字符串拆分为多行
+## 17.9 字符串拆分为多行Hive
+
+### 1，split()函数
+
+#### （1）定义
+
+split()函数是用于切分数据，也就是将一串字符串切割成了一个数组
+
+#### （2）语法
+
+语法：split(string str, string pat)
+返回值：数组类型array
+
+#### （3）参数解释
+
+string str ：待分割字符串
+string pat：分割符
+
+#### （4）测试
+
+测试SQL：
+
+```text
+select split ('wo,shi,xiao,ming',',');
+```
+
+运行结果：
+
+```text
+["wo","shi","xiao","ming"]
+```
+
+### 2，explode函数
+
+#### （1）定义
+
+explode()函数是用于打散行的函数，将一行的数据拆分成一列
+
+#### （2）语法
+
+explode(array/map类型)
+select explode(array_col) as new_col from table_name
+
+#### （3）测试
+
+测试SQL：
+
+```text
+select explode(array("wo","shi","xiao","ming")) as word;
+```
+
+运行结果：
+
+```text
+wo
+shi
+xiao
+ming
+```
+
+#### （4）explode函数的局限性
+
+1. 不能关联原有的表中的其他字段
+2. 不能与group by、cluster by、distribute by、sort by联用
+3. 不能进行UDTF嵌套
+4. 参数只能是两种类型
+5. 一个select后面只能获得一个explode产生的视图，如果要显示多个列，则需要将多个视图合并。lateral view就是做这样的事的
+
+### 3，lateral view
+
+**（1）定义**
+
+```text
+Lateral View用于和UDTF函数（explode、split）结合来使用
+首先通过UDTF函数拆分成多行，再将多行结果组合成一个支持别名的虚拟表。虚拟表相当于再和主表关联, 从而达到添加“UDTF生成的字段“以外字段的目的, 即主表里的字段或者主表运算后的字段。
+主要解决在select使用UDTF做查询过程中，查询只能包含单个UDTF，不能包含其他字段、以及多个UDTF的问题
+```
+
+#### （2）语法
+
+lateral view UDTF(expression) table_view as new_column;
+
+#### （3）参数解释
+
+1. UDTF(expression)：复合逻辑规则的UDTF函数，最常用的explode
+2. table_view : 对应的虚拟表的表名
+3. new_col: 虚拟表里存放的有效字段
+
+#### （4）测试
+
+```text
+select col_type   -- 已拆分数据
+from table_name
+lateral view explode(split(col,',')) t as col_type   --col 为需要拆分的字段
+```
+
+发布于 2021-08-25 09:00
