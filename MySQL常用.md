@@ -2337,3 +2337,46 @@ having count1 > 50;
 
 ## 17.7 小计、合计、总计
 
+
+
+## 17.8 字符串查找FIND_IN_SET
+
+`FIND_IN_SET(str, str_list)`，`str_list`是一个以`,`连接的大字符串，`str`是需要查询的子串，找到时返回该字符串的位置（从1开始计数）；如果没有找到，则返回0。
+
+一个案例
+component表
+
+| id   | group_ids |
+| ---- | --------- |
+| 1    | 3,4       |
+| 2    | 5         |
+| 3    | 3         |
+| ……   | ……        |
+
+active_group表
+
+| id   | name   |
+| ---- | ------ |
+| 3    | 益生菌 |
+| 4    | 益生元 |
+| 5    | 发酵物 |
+| ……   | ……     |
+
+需要查询返回这样的结果：
+
+| comp_id | group_name |
+| ------- | ---------- |
+| 1       | 益生菌     |
+| 1       | 益生元     |
+| 2       | 发酵物     |
+| 3       | 益生菌     |
+| ……      | ……         |
+
+```mysql
+SELECT c.id, ag.name
+FROM component c
+JOIN `active_group` ag ON FIND_IN_SET(ag.id, c.`active_group_ids`) > 0
+ORDER BY c.id;
+```
+
+## 17.9 字符串拆分为多行
