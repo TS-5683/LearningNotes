@@ -8,7 +8,7 @@ import os
 # 判断文本文件fileName是否包含关键词word
 def inFile(word:str ,fileName:str) -> bool:
     file = open(fileName, encoding='utf-8')
-    if word in file.read():
+    if word in file.read(): 
         file.close()
         return True
     file.close()
