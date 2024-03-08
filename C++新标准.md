@@ -761,7 +761,7 @@ Lambda 表达式的本质是一个和函数对象类型相似的类类型（称�
 #include <iostream >
 
 using foo = void(int); // 定 义 函 数 类 型 , using 的 使 用 见 上 一 节 中 的 别 名 语 法
-void functional(foo f) { // 定义在参数列表中的函数类型foo 被 视 为 退 化后的函数指针类型foo*
+void functional(foo f) { // 定义在参数列表中的函数类型foo被视为退化后的函数指针类型foo*
 	f(1); // 通过函数指针调用函数
 }
 
