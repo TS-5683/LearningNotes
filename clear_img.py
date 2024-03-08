@@ -16,7 +16,8 @@ def inFile(word:str ,fileName:str) -> bool:
 
 
 imgList = os.listdir('images')
-fileList = ['网络协议.md' ,'C++11内存.md', 'C++并发.md' ,'C++新标准.md' ,'MySQL常用.md', '大数据.md' ,'数理统计.md']
+fileList = ['网络协议.md' ,'C++11内存.md', 'C++并发.md' ,'C++新标准.md' ,
+            'MySQL常用.md', '大数据.md' ,'数理统计.md', 'Java.md']
 
 # 图片循环
 for imgName in imgList:
