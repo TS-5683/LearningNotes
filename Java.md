@@ -117,10 +117,12 @@ public class Book {
 
 ### 内部类
 
-**成员内部类**
+一般内部类之间相互独立，内部类即打破了这种独立。
+
+#### **非静态内部类**
 
 - 成员内部类是外部类的一个成员，它可以声明为public、protected、private或默认访问级别。
-- 它不能包含静态成员，因为静态成员属于类级别，而内部类实例化时需要外部类的实例。
+- 在一个类中使用内部类，可以在内部类中直接存取其所在类的私有成员变量、方法。
 
 ```java
 public class OuterClass {
@@ -132,9 +134,18 @@ public class OuterClass {
         }
     }
 }
+
+public class Runner {
+    public static void main() {
+        OuterClass outer = new OuterClass();
+        OuterClass.MemberInnerClass inner = outer.new InnerClass();  // 非静态内部类依赖于外部类的实例对象
+    }
+}
 ```
 
-**静态内部类**
+- 使用内部类可以隐藏细节和内部结构，封装性更好，让程序更合理
+
+#### **静态内部类**
 
 - 静态内部类是外部类的静态成员，它可以声明为public或private。
 - 它可以包含静态和非静态成员，并且不需要外部类的实例就可以创建。
@@ -148,9 +159,16 @@ public class OuterClass {
         }
     }
 }
+
+public class Runner {
+    public static void main() {
+        OuterClass outer = new OuterClass();
+        OuterClass.StaticInnerClass inner = new StaticInnerClass;  // 静态内部类依赖于外部类,不依赖于其对象实例
+    }
+}
 ```
 
-**局部内部类**
+#### **局部内部类**
 
 - 局部内部类是定义在方法或作用域内的类。
 - 它只能在定义它的区域内被访问和使用。
@@ -171,22 +189,82 @@ public class OuterClass {
 }
 ```
 
-**匿名内部类**
+#### **匿名内部类**
 
 - 匿名内部类是没有名称的局部内部类。
-- 它通常用于创建一个继承自类或实现接口的对象，并同时声明和实例化该对象。
+- 在功能中使用一个类或接口的子类、实现时使用的次数较少所以不必要为这个功能专门写一个类，这种情况下可以使用匿名内部类。
+- 匿名内部类必须是子类或接口的实现，因为匿名内部类没有名字，不能直接创建这种类型的引用，所以用其父类或接口的名字来创建引用。
 - 它可以访问其外部方法中声明为final或effectively final的局部变量。
 
 ```java
 public class OuterClass {
     public void outerMethod() {
-        Runnable r = new Runnable() {
+        Runnable r = new Runnable() {  // Runnable是一个java接口，用于创建一个线程
             @Override
             public void run() {
                 System.out.println("Anonymous Inner Class");
             }
         };
         new Thread(r).start();
+    }
+}
+```
+
+**案例**
+
+- 在主方法中创建匿名类对象来实现相关功能：
+
+  ```java
+  public class RunCode {
+      public static void main(String[] args) {
+          Animal a = new Animal() {
+              @Override
+              public void cry() {
+                  System.out.println("猫：喵");
+              }
+          };
+          a.cry();
+      }
+  }
+  
+  abstract class Animal {
+      public abstract void cry();
+  }
+  ```
+
+- 在传参时传入匿名类对象来实现相关功能：
+
+  ```java
+  public class RunCode {
+      public static void main(String[] args) {
+          go(new Swimming() {
+              @Override
+              public void swim() {
+                  System.out.println("dog swiming------");
+              }
+          });
+      }
+      
+      public static void go(Swimming s) {
+          System.out.println("start-----");
+          s.swim();
+      }
+  }
+  
+  interface Swimming {
+      void swim();
+  }
+  ```
+
+
+
+
+
+**使用内部类实现接口**
+```java
+public class Test {
+    public class Inner implements MyInterface {
+        // ……
     }
 }
 ```
@@ -430,7 +508,7 @@ myobject instanceof MyClass
 
 解决实际问题时，一般将父类定义为抽象类，需要使用这个父类进行继承与多态处理。回想继承和多态原理，继承树中越是在上方的类越抽象，如鸽子类继承鸟类、鸟类继承动物类等。在多态机制中，并不需要将父类初始化对象，我们需要的只是子类对象，所以在Java语言中设置抽象类不可以实例化对象，因为图形类不能抽象出任何一种具体图形，但它的子类却可以。
 
-抽象类：不可以实例化对象，但其子类可以。关键字：**abstract**
+抽象类：**不可以实例化对象**，即不可以出现在new后，但是可以出现在变量声明中，也就是说可以有这种类型的引用，但是不能有这种类型的对象。但其子类可以。关键字：**abstract**
 
 ```java
 public abstract class Test {
@@ -450,7 +528,7 @@ public abstract class Test {
 
 **模板方法设计模式**：吧子类中只需要部分个性化的方法设计为非抽象方法（模板方法），这个方法中需要个性化的部分封装在另外一个抽象方法中让模板方法来调用，以后子类继承时只需要重写父类中的抽象方法。为防止子类重写模板方法可在模板方法声明前缀**final**
 
-### 接口
+#### 接口
 
 抽象类的延伸，纯粹的抽象类，所有方法都没有方法体。需要接口内方法的子类实现这个接口。
 关键字：**interface**
@@ -468,6 +546,7 @@ public interface drawTest {
 - 接口的成员只能有成员变量和方法（构造器都不能有）
 - 接口中的成员变量默认为常量
 - 不能定义方法体
+- 本身也是抽象类，所以同样的不能实例对象，但是能引用实现类的对象
 
 ```java
 public interface A {
@@ -539,3 +618,153 @@ public class Class {
 }
 ```
 
+
+
+## 枚举
+
+ 一种特殊的类，用于定义一组常量,这些常量被称为枚举常量。枚举可以看作是一组命名的整数值，这些整数值是唯一的，并且可以被用来表示一组固定的选择。
+
+如季节类的实例的值一定是春夏秋冬四个中的一个，季节类就很适合设计为枚举。
+
+```java
+enum Season {
+	SPRING, SUMMER, AUTUMN, WINTER;
+}
+```
+
+注意事项：
+
+- 第一行必须是罗列的枚举常量
+- 构造器私有（写不写都是），**不能创建对象**
+- 可以写其他成员变量、方法
+
+对枚举类的反编译会发现：
+
+- 枚举是继承了lang.Enum的子类，而且是最终类→**不能被继承**
+- 每个枚举常量都是本枚举类类型的常量，而且是静态的
+- 新增了方法如values返回枚举的所有常量列表、valueOf返回枚举常量的索引
+
+**案例**：季节枚举
+
+```java
+public enum Season {
+    SPRING, SUMMER, AUTUMN, WINTER;
+
+    // 获取季节描述的方法
+    public String getDescription() {
+        switch (this) {
+            case SPRING:
+                return "春天";
+            case SUMMER:
+                return "夏天";
+            case AUTUMN:
+                return "秋天";
+            case WINTER:
+                return "冬天";
+            default:
+                return "未知季节";
+        }
+    }
+
+    // 计算n个季节后的季节
+    public Season nextSeason(int n) {
+        // 枚举值的数量
+        int totalSeasons = Season.values().length;
+        // 计算偏移后的索引
+        int offset = (ordinal() + n) % totalSeasons;
+        // 返回偏移后的枚举值
+        return Season.values()[offset];
+    }
+}
+
+public class SeasonExample {
+    public static void main(String[] args) {
+        // 获取当前季节
+        Season currentSeason = Season.SUMMER;
+        System.out.println("当前季节: " + currentSeason.getDescription());
+
+        // 计算再过3个季节后的季节
+        Season nextSeason = currentSeason.nextSeason(3);
+        System.out.println("3个季节后是: " + nextSeason.getDescription());
+    }
+}
+```
+
+### 抽象枚举
+
+```java
+public enum B {
+    X() {
+        
+    }, Y() {
+        
+    }
+    
+    B(){
+        
+    }
+    
+    private name String;
+    
+    public void f();
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    public String getName() {
+        return this.name;
+    }
+}
+```
+
+### 可以使用枚举来实现单例
+
+```java
+public enum A {
+	a;
+	
+	// ……
+}
+```
+
+
+
+# 泛型
+
+定义类、接口、方法时，同时声明了一个或者多个类型变量(如:<E>)称为泛型类、泛型接口，泛型方法、它们统称为泛型。（和C++的可以类比）
+
+**泛型类**
+
+```java
+public class ClassName<T> {
+    // 类定义，其中T是类型参数
+    private T data;
+
+    public ClassName(T data) {
+        this.data = data;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+}
+```
+
+**泛型方法**
+
+```java
+public class Utility {
+    public static <T> void printArray(T[] array) {
+        for (T element : array) {
+            System.out.print(element + " ");
+        }
+        System.out.println();
+    }
+}
+```
+
+**泛型接口**
