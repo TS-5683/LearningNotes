@@ -768,3 +768,53 @@ public class Utility {
 ```
 
 **泛型接口**
+
+
+
+# 常用API
+
+## Object
+
+java中所有class的根
+
+常用方法
+
+| 返回类型 | 方法               | 描述                     |
+| -------- | ------------------ | ------------------------ |
+| Object   | clone()            | 返回对象的拷贝           |
+| class<>  | getClass()         | 返回此Object的运行时类   |
+| boolean  | equals(Object obj) | 判断对象“值”是否相等     |
+|          | toString()         | 返回对象的字符串表示形式 |
+
+- <small>比较对象“值”是否相等的方法有Object类的equal方法和对象的equal方法，**优选Object类的equal**方法，这个方法不会因为空指针报错</small>
+
+## 包装类
+
+基本类型的数据包装为类即为包装类。
+
+Java泛型中只支持引用数据类型不支持基本数据类型，所以需要有包装类。
+
+toString方法可以把基本数据转为字符串。
+
+```java
+Integer num = Integer.valueOf(12);  // 推荐，Integer(int)已经过时
+Integer num = 12;  // 自动包箱
+int a = num;  // 自动拆箱
+```
+
+### StringBuilder
+
+- 可以代表字符串对象，相当于一个容器，其中的字符串是可变的。
+- 在做字符串的修改操作时比String高效。
+
+```java
+StringBuilder() // 不包含任何字符的构造
+StringBuilder(int len) // 设置除数容量的构造
+StringBuilder(String str)
+StringBuilder(CharSequence seq)
+```
+
+
+
+
+

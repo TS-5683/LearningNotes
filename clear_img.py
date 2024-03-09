@@ -14,10 +14,11 @@ def inFile(word:str ,fileName:str) -> bool:
     file.close()
     return False
 
-
+current_directory = os.getcwd()
 imgList = os.listdir('images')
-fileList = ['网络协议.md' ,'C++11内存.md', 'C++并发.md' ,'C++新标准.md' ,
-            'MySQL常用.md', '大数据.md' ,'数理统计.md', 'Java.md']
+fileList = [f for f in os.listdir(current_directory) if 
+            os.path.isfile(os.path.join(current_directory, f))]
+print( fileList)
 
 # 图片循环
 for imgName in imgList:
