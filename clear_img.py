@@ -18,7 +18,7 @@ current_directory = os.getcwd()
 imgList = os.listdir('images')
 fileList = [f for f in os.listdir(current_directory) if 
             os.path.isfile(os.path.join(current_directory, f))]
-print( fileList)
+print(fileList)
 
 # 图片循环
 for imgName in imgList:
