@@ -802,7 +802,7 @@ Integer num = 12;  // 自动包箱
 int a = num;  // 自动拆箱
 ```
 
-### StringBuilder
+## StringBuilder
 
 - 可以代表字符串对象，相当于一个容器，其中的字符串是可变的。
 - 在做字符串的修改操作时比String高效。
@@ -814,7 +814,118 @@ StringBuilder(String str)
 StringBuilder(CharSequence seq)
 ```
 
+## BigDecimal
+
+以字符串形式存储数字，以解决精度、大小范围等问题
+
+```java
+BigDecimal a = new BigDecimal(Double.toString(1.1));
+BigDecimal b = new BigDecimal.valueOf(2.2);
+
+a.add(b); // 加法
+a.subtract(b); // 减法
+a.multiply(b); // 乘法
+a.divide(b); // 触发
+
+a.divide(b, 2, RoundingMode.HALF_UP);  //设定保留位数、修约方式
+```
+
+## Arrays
+
+处理数组的一个方法类
 
 
 
+# lambda表达式
 
+简化匿名内部类。
+
+```java
+public class Run {
+    public static void main(String[] args) {
+        Animal a = new Animal () {
+            @Override
+            public void run() {
+                
+            }
+        }
+    }
+}
+
+abstract class Animal {
+    public abstract void run();
+}
+```
+
+↑ 匿名内部类的方式
+
+Lambda表达式的使用前提：
+
+- 只能简化函数式接口的匿名内部类：只能有一个抽样方法的接口
+
+```java
+public class Run {
+    public static void main(String[] args) {
+        Swiming s = () -> {
+            System.out.println("Swimming: GO")
+        }
+    }
+}
+
+@FunctionalInterface
+interface Swimming {
+    void swim();
+}
+```
+
+Lambda表达式的省略写法
+
+- 参数类型可以省略不写
+- 如果只有一个参数，参数类型可以省略的同时可以省略()；
+- 如果其中只有一行代码，可省略大括号和分号，如果是return语句则return必须省。
+
+```java
+import java.util.Arrays;
+import java.util.List;
+import java.util.Collections;
+
+public class LambdaExample {
+    public static void main(String[] args) {
+        // 创建一个字符串列表
+        List<String> names = Arrays.asList("Apple", "Banana", "Cherry", "Date");
+
+        // 使用Lambda表达式来定义一个比较器，按照字符串长度排序
+        Collections.sort(names, (s1, s2) -> s1.length() - s2.length()); // 省略了大括号和return
+
+        // 输出排序后的列表
+        System.out.println(names);
+    }
+}
+```
+
+
+
+# 方法引用
+
+Java方法引用是一种简化代码的语法特性，它允许你直接使用方法名来引用方法，而不是编写完整的lambda表达式。这在处理函数式接口时特别有用，因为函数式接口通常只有一个抽象方法。方法引用主要有三种类型：
+
+1. **静态方法引用**：用于引用类的静态方法。其语法格式为 `ClassName::staticMethodName`。 示例：
+
+   ```
+   List<String> list = Arrays.asList("a", "b", "c");
+   list.forEach(System.out::println); // 使用静态方法println来打印列表元素
+   ```
+
+2. **实例方法引用**：用于引用对象的实例方法。这种引用需要一个实例，语法格式为 `instance::instanceMethodName`。 示例：
+
+   ```
+   MyClass obj = new MyClass();
+   obj::someMethod; // 引用obj对象的someMethod实例方法
+   ```
+
+3. **类方法引用**：用于引用一个类的方法，这个方法的第一个参数是类本身，通常用于静态方法。语法格式为 `ClassName::typeNameMethodName`。 示例：
+
+   ```
+   复制List<String> list = Arrays.asList("a", "b", "c");
+   list.forEach(String::toUpperCase); // 使用String类的toUpperCase方法将字符串转换为大写
+   ```
