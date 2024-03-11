@@ -1178,6 +1178,8 @@ class AgeIllegalException extends Exception {
 
 ## Collection体系
 
+所有单列集合的基类
+
 ![image-20240311143741245](./images/image-20240311143741245.png)
 
 ### 遍历方式
@@ -1290,3 +1292,52 @@ public class Runner {
 }
 ```
 
+
+
+### List
+
+特点：有序、可重复、有索引
+
+**索引方法**
+
+| 方法                             | 描述                                   |
+| -------------------------------- | -------------------------------------- |
+| `void add(int index, E element)` | 在此集合对象的指定位置插入指定元素     |
+| `E remove(int index)`            | 删除所引处的元素，返回被删除元素       |
+| `E set(int index, E element)`    | 修改指定索引出的元素，返回被修改的元素 |
+| `E get(int index)`               | 返回指定索引出的元素                   |
+
+**遍历方式**
+
+- for循环（因为有索引）
+- 迭代器
+- 增强for
+- lambda表达式
+
+#### ArrayList
+
+- 数据结构：数组
+- 按位查找快
+- 非尾部插入、删除慢
+- 必要时会扩容（新整一个大的数组再拷贝），扩容为原本的1.5倍
+
+#### LinkedList
+
+- 数据结构：双链表
+
+- 查找慢
+
+- 增删快
+
+- 新增方法
+
+  | 方法                        | 描述               |
+  | --------------------------- | ------------------ |
+  | `public void addFirst(E e)` | 头插               |
+  | `public void addLast(E e)`  | 尾插               |
+  | `public E getFirst()`       | 返回第一个元素     |
+  | `public E getLast()`        | 返回尾部元素       |
+  | `public E removeFirst()`    | 删除并返回头部元素 |
+  | `public E removeLast()`     | 删除并返回尾部元素 |
+
+  
