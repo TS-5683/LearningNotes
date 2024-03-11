@@ -1138,4 +1138,155 @@ class AgeIllegalException extends Exception {
 ## 用户的常见处理
 
 1. 捕获异常，记录异常并相应合适的信息给用户
+
 2. 捕获异常，尝试重新修复
+
+   ```java
+   import java.util.Scanner;
+   
+   public class Runner {
+       public static void main(String[] args) {
+           while (true) {
+               try {
+                   System.out.println(getPrice());
+               } catch (Exception e) {
+                   System.out.println("请输入合法的数字");
+               }
+           }
+       }
+   
+       public static double getPrice() {
+           Scanner sc = new Scanner(System.in);
+           while (true) {
+               double money = sc.nextDouble();
+               if (money >= 0) {
+                   sc.close();
+                   return money;
+               } else {
+                   System.out.println("输入的价格不合适");
+               }
+           }
+       }
+   }
+   ```
+
+
+
+# 常用集合（容器）
+
+![image-20240311143631287](./images/image-20240311143631287.png)
+
+## Collection体系
+
+![image-20240311143741245](./images/image-20240311143741245.png)
+
+### 遍历方式
+
+#### 迭代器
+
+迭代器是用来遍历集合的专用方式(数组没有迭代器)，在Java中迭代器的代表是Iterator。
+
+Collection集合获取迭代器的方法
+
+| 方法                  | 描述                                                 |
+| --------------------- | ---------------------------------------------------- |
+| `terator<E> iterator` | 返回集合中的迭代器对象，默认指向当前集合的第一个元素 |
+
+**常用方法**
+
+| 方法                | 描述                                             |
+| ------------------- | ------------------------------------------------ |
+| `boolean hasNext()` | 当前位置是否有元素存在                           |
+| `E next()`          | 获取当前位置的元素，并同时将迭代器指向下一个元素 |
+
+```java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+
+public class Runner {
+    public static void main(String[] args) {
+        Collection<String> c = new ArrayList<>();
+        c.add("阿荣");
+        c.add("阿洁");
+        c.add("阿龙");
+        c.add("阿凯");
+        System.out.println(c);
+
+        Iterator<String> it = c.iterator();
+        while (it.hasNext()) {
+            System.out.println(it.next());
+        }
+    }
+}
+```
+
+
+
+#### 增强for
+
+`for (元素的类型 变量名:数组或集合) {}`
+
+```java
+import java.util.ArrayList;
+import java.util.Collection;
+
+public class Runner {
+    public static void main(String[] args) {
+        Collection<String> c = new ArrayList<>();
+        c.add("阿荣");
+        c.add("阿洁");
+        c.add("阿龙");
+        c.add("阿凯");
+        System.out.println(c);
+
+        for (String string : c) {
+            System.out.println(string);
+        }
+    }
+}
+```
+
+遍历集合或接口都可，基本上只要是可迭代的都行。
+
+
+
+#### lambda表达式
+
+```java
+可迭代对象.forEach(new Consumer<可迭代对象元素类型>（）{
+    @Override
+    public void accept(String s) {
+        System.out.println(s);
+    }
+})
+```
+
+| 方法                                               | 描述                     |
+| -------------------------------------------------- | ------------------------ |
+| `defualt foid forEach(Sonsumer<? super T> action)` | 结合lambda表达式遍历集合 |
+
+```java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.function.Consumer;
+
+public class Runner {
+    public static void main(String[] args) {
+        Collection<String> c = new ArrayList<>();
+        c.add("阿荣");
+        c.add("阿洁");
+        c.add("阿龙");
+        c.add("阿凯");
+        System.out.println(c);
+
+        c.forEach(new Consumer<String>(){
+            @Override
+            public void accept(String s) {
+                System.out.println(s);
+            }
+        });
+    }
+}
+```
+
