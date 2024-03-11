@@ -1335,9 +1335,31 @@ public class Runner {
   | --------------------------- | ------------------ |
   | `public void addFirst(E e)` | 头插               |
   | `public void addLast(E e)`  | 尾插               |
-  | `public E getFirst()`       | 返回第一个元素     |
-  | `public E getLast()`        | 返回尾部元素       |
+  | `public E getFirst()`       | 返回第一个元素索引 |
+  | `public E getLast()`        | 返回尾部元素索引   |
   | `public E removeFirst()`    | 删除并返回头部元素 |
   | `public E removeLast()`     | 删除并返回尾部元素 |
 
-  
+
+
+### Set
+
+不重复；无索引
+
+#### HashSet
+
+哈希
+
+无序，快速
+
+#### LinkedHashSet
+
+链表+哈希
+
+有序快速，可以有索引
+
+#### TreeSet
+
+二叉树
+
+排序比较快速，无索引
