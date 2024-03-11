@@ -1,5 +1,7 @@
 # Java内存分配
 
+JVM时java所有方法、类的上层
+
 - 方法区
   **所有线程共享**，存储已被虚拟机加载的**类信息**、**常量**、**静态变量**和**即时编译器编译后的代码**等数据。
 - 堆
@@ -784,7 +786,7 @@ java中所有class的根
 | Object   | clone()            | 返回对象的拷贝           |
 | class<>  | getClass()         | 返回此Object的运行时类   |
 | boolean  | equals(Object obj) | 判断对象“值”是否相等     |
-|          | toString()         | 返回对象的字符串表示形式 |
+| String   | toString()         | 返回对象的字符串表示形式 |
 
 - <small>比较对象“值”是否相等的方法有Object类的equal方法和对象的equal方法，**优选Object类的equal**方法，这个方法不会因为空指针报错</small>
 
@@ -907,18 +909,58 @@ public class LambdaExample {
 
 # 方法引用
 
-Java方法引用是一种简化代码的语法特性，它允许你直接使用方法名来引用方法，而不是编写完整的lambda表达式。这在处理函数式接口时特别有用，因为函数式接口通常只有一个抽象方法。方法引用主要有三种类型：
+Java方法引用是一种简化代码的语法特性，也就是lambda表达式的进一步简化，允许直接使用方法名来引用方法，而不是编写完整的lambda表达式。这在处理函数式接口时特别有用，因为函数式接口通常只有一个抽象方法。方法引用主要有三种类型：
 
-1. **静态方法引用**：用于引用类的静态方法。其语法格式为 `ClassName::staticMethodName`。 示例：
+1. **静态方法引用**：用于引用类的静态方法。其语法格式为 `ClassName::staticMethodName`。 
+   使用场景：某个Lambda表达式只是调用了一个静态方法而且前后的参数列表一致。
 
+   ```java
+   import java.util.Arrays;
+   
+   class Person {
+       private int age;
+       private String name;
+       
+       public Person(String s, int a) {
+           this.name = s;
+           this.age = a;
+       }
+       
+       public int getAge() {
+           return this.age;
+       }
+       
+       public String getName() {
+           return this.name;
+       }
+   
+       public String toString() {
+           return "Name: " + this.name + ", Age: " + this.age;
+       }
+   }
+   
+   class CompareByData {
+       public static int compareByAge(Person s1, Person s2) {
+           return s1.getAge() - s2.getAge();
+       }
+   }
+   
+   public class Runner {
+       public static void main(String[] args) {
+           Person[] persons = new Person[4];
+           persons[0] = new Person("tom", 10);
+           persons[1] = new Person("tim", 20);
+           persons[2] = new Person("timi", 18);
+           persons[3] = new Person("Alice", 16);
+           Arrays.sort(persons, CompareByData::compareByAge);
+           System.out.println(Arrays.toString(persons));
+       } 
+   }
    ```
-   List<String> list = Arrays.asList("a", "b", "c");
-   list.forEach(System.out::println); // 使用静态方法println来打印列表元素
-   ```
+   
+2. **实例方法引用**：用于引用对象的实例方法。这种引用需要一个实例，语法格式为 `instance::instanceMethodName`。 使用场景：某个Lambda表达式只是调用了一个静态方法而且前后的参数列表一致。
 
-2. **实例方法引用**：用于引用对象的实例方法。这种引用需要一个实例，语法格式为 `instance::instanceMethodName`。 示例：
-
-   ```
+   ```java
    MyClass obj = new MyClass();
    obj::someMethod; // 引用obj对象的someMethod实例方法
    ```
@@ -926,6 +968,174 @@ Java方法引用是一种简化代码的语法特性，它允许你直接使用�
 3. **类方法引用**：用于引用一个类的方法，这个方法的第一个参数是类本身，通常用于静态方法。语法格式为 `ClassName::typeNameMethodName`。 示例：
 
    ```
-   复制List<String> list = Arrays.asList("a", "b", "c");
-   list.forEach(String::toUpperCase); // 使用String类的toUpperCase方法将字符串转换为大写
+   Arrays.sort(names, (o1, o2) -> o1.cpmpareToIgnerCase(o2));
+   // 简化为 ↓
+   Arrays.sort(names, String::compareIgnoreCase);
    ```
+
+```java
+import java.util.Arrays;
+import java.util.List;
+import java.util.Collections;
+
+public class MethodReferenceExample {
+    public static void main(String[] args) {
+        // 创建一个字符串列表
+        List<String> fruits = Arrays.asList("banana", "apple", "cherry", "date");
+
+        // 使用方法引用对列表进行字典顺序排序
+        Collections.sort(fruits, String::compareTo);
+
+        // 输出排序后的列表
+        for (String fruit : fruits) {
+            System.out.println(fruit);
+        }
+    }
+}
+```
+
+4. **构造器引用**：直接引用一个类的构造器。
+
+   `ClassName::new`。使用场景：如果某个lambda表达式只是在构造对象而且前后参数一致，就可以使用。
+
+   ```java
+   class Car {
+       public String name;
+       public double price;
+       // 方法、其他属性
+   }
+   
+   interface CreateCar {
+       Car create(String name, double price);
+   }
+   
+   public class Runner {
+       public static void main(String[] args) {
+           
+       }
+       
+       public static void test1() {
+           CreateCar cc = new CreatCar() {  // 局部匿名内部类
+               @Override
+               public Car create(String name, double price) {
+                   return new Car(name, price);
+               }
+           }
+       	Car c = cc.create('Bnez', 49.9);
+       	System.out.println(c.toString());
+       }
+       
+       public static void test2() {
+           CreateCar cc = (name, price) -> new Car(name, price);  // lambda表达式
+       	Car c = cc.create('Bnez', 49.9);
+       	System.out.println(c.toString());
+       }
+       
+       public static void test3() {
+           CreateCar cc = Car::new;  // 构造器引用
+       	Car c = cc.create('Bnez', 49.9);
+       	System.out.println(c.toString());
+       }
+   }
+   ```
+   
+
+
+
+# 异常
+
+## **异常的体系**
+
+![image-20240311132358358](./images/image-20240311132358358.png)
+
+Error：系统级别错误，系统出现严重问题时sun公司会将问题包装成Error。（Error是给sun公司自己用的）
+
+**Exception**：异常，程序可能出现的问题
+
+- **运行时异常**：RuntimeException及其子类，编译阶段不会出现错误提醒，运行时出现的异常（如：数组索引越界异常）
+- **编译时异常**：编译阶段就会出现错误提醒的。（如：日期解析异常）
+
+## 捕获异常
+
+`try`、`catch`、`finally`、`throws`
+
+- **`try`**：尝试运行的代码
+- **`catch`**：尝试运行的代码异常时执行的代码
+- **`finally`**：不论`try`运行是否异常都会运行
+- **`throws`**：标注在方法后，将方法内遇到的异常抛出上一级方法
+- **`throw`**：用于`try`语句代码块中或`try`所调用的方法中，抛出异常给`catch`捕获
+
+## 自定义运行时异常
+
+```java
+public class Runner {
+    public static void main(String[] args) {
+        // 保存一个年龄
+        try {
+            saveAge(160);
+            System.out.println("执行成功");
+        }
+        catch(Exception e) {
+            System.out.println("执行失败：");
+            e.printStackTrace();
+        }
+    }
+    
+    public static void saveAge(int age) {
+        if (age >= 0 && age < 150) {
+            System.out.println("年龄保存成功：" + age);
+        } else {
+            // 用一个异常对象来封装年龄非法问题
+            throw new AgeIllegalRuntimeException("/age: "+age+"is illegal");
+        }
+    }
+}
+
+class AgeIllegalRuntimeException extends RuntimeException {
+    public AgeIllegalRuntimeException () {}
+    
+    public AgeIllegalRuntimeException (String message) {
+        super(message);  // 将message送到父类去构造，相当于C++中的委托构造
+    }
+}
+```
+
+## 自定义编译时异常
+
+```java
+public class Runner {
+    public static void main(String[] args) {
+        // 保存一个年龄
+        try {
+            saveAge1(278);
+            System.out.println("执行成功");
+        }
+        catch (Exception e) {
+            System.out.println("执行失败：");
+            e.printStackTrace();
+        }
+    }
+    
+    public static void saveAge1(int age) throws AgeIllegalException{
+        if (age >= 0 && age < 150) {
+            System.out.println("年龄保存成功：" + age);
+        } else {
+            // 用一个异常对象来封装年龄非法问题
+            throw new AgeIllegalException("\n/age: " + age + " is illegal");
+        }
+    }
+}
+
+class AgeIllegalException extends Exception {
+    public AgeIllegalException () {}
+    
+    public AgeIllegalException (String message) {
+        super(message);  // 将message送到父类去构造，相当于C++中的委托构造
+    }
+}
+```
+
+## 用户的常见处理
+
+1. 捕获异常，记录异常并相应合适的信息给用户
+2. 捕获异常，尝试重新修复
