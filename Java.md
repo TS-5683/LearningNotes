@@ -909,7 +909,11 @@ public class LambdaExample {
 
 # 方法引用
 
-Java方法引用是一种简化代码的语法特性，也就是lambda表达式的进一步简化，允许直接使用方法名来引用方法，而不是编写完整的lambda表达式。这在处理函数式接口时特别有用，因为函数式接口通常只有一个抽象方法。方法引用主要有三种类型：
+Java方法引用是一种简化代码的语法特性，也就是lambda表达式的进一步简化，允许直接使用方法名来引用方法，而不是编写完整的lambda表达式。这在处理函数式接口时特别有用，因为函数式接口通常只有一个抽象方法。
+
+方法引用这种类型的关键字为`Consumer`
+
+方法引用主要有三种类型：
 
 1. **静态方法引用**：用于引用类的静态方法。其语法格式为 `ClassName::staticMethodName`。 
    使用场景：某个Lambda表达式只是调用了一个静态方法而且前后的参数列表一致。
@@ -1346,20 +1350,119 @@ public class Runner {
 
 不重复；无索引
 
-#### HashSet
+**`HashSet`**
 
 哈希
 
 无序，快速
 
-#### LinkedHashSet
+**`LinkedHashSet`**
 
 链表+哈希
 
 有序快速，可以有索引
 
-#### TreeSet
+**`TreeSet`**
 
 二叉树
 
 排序比较快速，无索引
+
+
+
+## Map体系集合
+
+Map接口提供的是key到value的映射，不能包含相同的key，每个key只能映射一个value。
+
+key还决定了存储对象在映射中的存储位置，但不是由key对象本身决定的，而是通过一种“散列技术”进行处理，产生一个散列码的整数值。
+
+实现类有：`HashMap`、`TreeMap`、`LinkedHashMap`等
+
+`Map<Ek, Ev> mapName = new HashMap<>();`
+
+- **`HashMap`**：无序、不重复、无索引。哈希
+- **`LinkedHashMap`**：有序、不重复、无索引。哈希+链表
+- **`TreeMap`**：按键大小默认升序，不重复，无索引。二叉树
+
+常用方法：
+
+| 方法                                    | 描述                      |
+| --------------------------------------- | ------------------------- |
+| `public V put(K key, V value)`          | 添加元素                  |
+| `public int size()`                     | 获取集合元素个数          |
+| `public void clear()`                   | 清空集合                  |
+| `public boolean isEmpty()`              | 判断集合是否为空          |
+| `public V get(K ket)`                   | 根据键取值                |
+| `public V remove(K key)`                | 根据键删除元素并返回其值  |
+| `public boolean containsKey(K key)`     | 判断是否包含某个键        |
+| `public boolean containsValue(V value)` | 判断是否包含某个值        |
+| `public Set<K> keySet()`                | 获取全部键的集合          |
+| `public Collection<V> values()`         | 获取全部值                |
+| `Set<Map.Entry<K, V>> entrySet()`       | 把键和值封装之后输出为Set |
+
+`Map.Entry`提供的方法：
+
+| 方法           | 描述           |
+| -------------- | -------------- |
+| `K getKey()`   | 返回键值对的键 |
+| `V getValue()` | 返回值         |
+
+
+
+### Map的遍历
+
+- **键找值**：先获取Map集合的全部键，再通过遍历键来找值
+  
+  ```java
+  import java.util.HashMap;
+  import java.util.Map;
+  import java.util.Set;
+  
+  public class Runner {
+      public static void main(String[] args) {
+          Map<String, Double> m = new HashMap<>();
+          m.put("阿青", 162.6);
+          m.put("阿青", 169.8);
+          m.put("阿紫", 165.8);
+          m.put("阿宝", 169.8);
+          System.out.println(m);
+  
+          Set<String> keys = m.keySet();
+          for (String str : keys) {
+              System.out.println(str+" ---> "+m.get(str));
+          }
+      }
+  }
+  ```
+  
+- **键值对**：把键值对看成一个整体进行遍历
+
+  ```java
+  Set<Map.Entry<String, Double>> s = m.entrySet();
+          for (Map.Entry<String,Double> entry : s) {
+              System.out.println(entry.getKey()+" ---> "+entry.getValue());
+          }
+  ```
+
+- **Lambda表达式**
+  `default void forEach(BiConsumer<? super K, ? siper V> action)`
+
+  ```java
+  m.forEach(new BiConsumer<String, Double>() {
+      @Override
+      public void accept(String k, Double v) {
+          System.out.println(k+" ----> "+v);
+      }
+  });
+  ```
+
+  进一步简化↓
+
+  ```java
+  m.forEach((k, v) -> {
+  	System.out.println(k + " ----> " + v);
+  });
+  ```
+
+  
+
