@@ -1520,3 +1520,29 @@ Stream流使用步骤
 | `R collect(Collector collector)` | 把流处理后的结果收集到一个指定的集合中 |
 | `Object[] toArray()`             | 把流处理后的结果收集到一个数组         |
 
+
+
+# File、IO
+
+获取文件、读写数据
+
+## File
+
+构造器
+
+| 构造器                              | 描述                                                   |
+| ----------------------------------- | ------------------------------------------------------ |
+| `File(File parent, String child)`   | 从父抽象路径名和子路径名字符串创建新的File实例         |
+| **`File(String pathname)`**         | 通过将给定的路径名字转换为抽象路径名来创建新的File实例 |
+| `File(String parent, String child)` | 从符路径名和子路径名创建新的File实例                   |
+| `File URI uri`                      | 通过给等的file: URI转换为抽象路径来创建File实例        |
+
+常用方法
+
+| 方法               | 描述                             |
+| ------------------ | -------------------------------- |
+| `boolean delete()` | 删除此抽象路径名表示的文件或目录 |
+| `boolean exists()` | 判断是否存在                     |
+| `String getName()` | 返回文件名                       |
+| `long length()`    | 返回文件的字节数                 |
+

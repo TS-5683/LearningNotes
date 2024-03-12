@@ -18,7 +18,6 @@ current_directory = os.getcwd()
 imgList = os.listdir('images')
 fileList = [f for f in os.listdir(current_directory) if 
             os.path.isfile(os.path.join(current_directory, f))]
-print(fileList)
 
 # 图片循环
 for imgName in imgList:
@@ -28,5 +27,9 @@ for imgName in imgList:
             flag = True
             break
     if not flag:
-        print('删除图片：'+imgName)
-        os.remove('images\\'+imgName)
+        try:
+            os.remove('images\\'+imgName)
+            print('删除图片：'+imgName+' 成功')
+        except Exception as e:
+            print("删除图片："+imgName+" 失败\n",e)
+
