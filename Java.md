@@ -1546,3 +1546,34 @@ Stream流使用步骤
 | `String getName()` | 返回文件名                       |
 | `long length()`    | 返回文件的字节数                 |
 
+### 文件信息方法
+
+| 方法名称                          | 说明                                     |
+| --------------------------------- | ---------------------------------------- |
+| `public boolean exists()`         | 判断当前文件对象，对应的文件路径是否存在 |
+| `public boolean isFile()`         | 判断当前文件对象指代的是否为文件         |
+| `public boolean isDirectory()`    | 判断当前文件对象指代的是否为文件夹       |
+| `public String getName()`         | 获取文件的名称（包含后缀）               |
+| `public long length()`            | 获取文件的大小，返回字节个数             |
+| `public long lastModified()`      | 获取文件的最后修改时间。                 |
+| `public String getPath()`         | 获取创建文件对象时，使用的路径           |
+| `public String getAbsolutePath()` | 获取绝对路径                             |
+
+<small>`LastModified()`返回的是自1970年1月1日00:00:00 GMT（格林威治标准时间）以来的毫秒数。使用**`SimpleDateFormat`**可将其转码为常用时间格式</small>
+
+### 创建文件、删除文件方法
+
+| 方法                             | 描述                   |
+| -------------------------------- | ---------------------- |
+| `public boolean createNewFile()` | 创建一个空的文件       |
+| `public boolean mkdir()`         | 只能创建**一级**文件夹 |
+| `public boolean mkdirs()`        | 可以创建**多级**文件夹 |
+| `public boolean delete()`        | 删除文件、**空**文件夹 |
+
+### 遍历文件夹
+
+| 方法                        | 描述                                                   |
+| --------------------------- | ------------------------------------------------------ |
+| `public String[] list()`    | 获取当前目录下所有**一级文件名**称组成的字符串数组     |
+| `public File[] listFiles()` | 获取当前目录下所有的**一级文件对象到**一个文件对象数组 |
+
