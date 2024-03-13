@@ -1600,11 +1600,131 @@ Stream流使用步骤
 
 ### FileInputStream
 
-构造器：`FileInputStream(String pathName)`使用路径名来实例文件输入流
+构造器：`FileInputStream(String pathName)`使用路径名来实例文件输入流、`FileInputStream(File fileName)`使用File对象创建文件输入流
 
 方法：
 
 - `public int read()`每次读取一个字节返回，若没有数据可读会返回-1
 - `public int read(byte[] buffer)`每次用一个字节数组去读取数据，返回字节数组读取了多少个字节，没有数据可读会返回-1
 
-读取数据的性能差
+缺陷与注意：
+
+- `read()`读取数据的性能差，没读一次就要磁盘i一次
+- `read()`读取汉字输出会乱码
+- 使用完后必须关闭
+
+#### 一次性读取全部字节
+
+- `public int read(byte[] buffer)`
+- `public byte[] readAllBytes() throws IOException`
+
+问题：
+
+- 如果文件过大创建的字符数组也会过大产生溢出
+- 读写文本文件更适合用字符流，字节流适合做数据的转移
+
+### FileOutputStream
+
+以内存为基准吧内存中的数据以字节的形式写出到文件
+
+构造器：
+
+- `public FileOutputStream(File file)`：与文件对象接通输出流
+- `public FileOutputStream(String filepath)`：创建字节输出流管道与源文件路径接通
+- `public FileOutputStream(File file, boolean append)`：是否可追加
+- `public FileOutputStream(String filepath, boolean append)`：是否可追加
+
+方法：
+
+- `public void write(int a)`：写出一个字节
+- `public void write(byte[] buffer)`：写出一个字节数组
+- `public void write(byte[] buffer, int pos, int len)`：写出一个字节数组的一部分
+- `public void close() throws IOException`：关闭流
+
+
+
+## 缓冲流BufferReader、BufferWriter
+
+```java
+br = new BufferedReader(new FileReader("example.txt"));
+String line;
+while ((line = br.readLine()) != null) {
+    System.out.println(line);
+}
+```
+
+```java
+bw = new BufferedWriter(new FileWriter("example.txt"));
+bw.write("Hello, World!");
+bw.newLine(); // 写入一个新行
+bw.write("Moonshot AI");
+```
+
+注意：
+
+- 使用时记得关闭
+- BfferWriter构造器中可设置是否追加，不追加就是覆盖了
+
+
+
+## Files类读写文件
+
+全部字节读取：
+
+```java
+String content = new String(Files.readAllBytes(Paths.get("example.txt")));
+System.out.println(content);
+```
+
+按行读取：
+
+- `List<String> lines = Files.readAllLines(filePath);`(filePath 是一个Path类对象)：返回包含所有行的字符串List
+- `Files.lines(filePath)`：读取所有行返回字符串流
+
+读取所有字符：
+
+```java
+String content = Files.readString(filePath);
+System.out.println(content);
+```
+
+Files类写入文件：
+
+- 覆盖模式
+
+  ```java
+  String content = "Hello, World!\nMoonshot AI";
+  Files.write(Paths.get("example.txt"), content.getBytes());
+  ```
+
+- 追加、设定字符集
+
+  ```java
+  String content = "Hello, World!\nMoonshot AI";
+  Files.write(Paths.get("example.txt"), content.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+  ```
+
+  
+
+## 文件复制
+
+一些文件的底层都是字节，所以字节流适合用于所有文件的复制。
+
+![image-20240313164410316](./images/image-20240313164410316.png)
+
+```java
+public class CopyFile {
+    public static void main(String[] args) {
+        InputStream is = new FileInputStream("path/filename.format");
+        OutputStream os = new FileOutputStream("path1/filename1.format");
+        byte[] buffer = new byte[1024];
+        int len;
+        while (len = is.read(buffer) != -1) {
+            os.write(buffer, 0, len);
+        }
+        os.close();
+        is.close();
+    }
+}
+```
+
