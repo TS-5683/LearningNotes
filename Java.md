@@ -15,6 +15,8 @@ JVM时java所有方法、类的上层
 
 ![img](./images/image-20240313151333333.png)
 
+
+
 # Java变量
 
 ## 变量的有效范围
@@ -37,6 +39,8 @@ JVM时java所有方法、类的上层
 - final变量：只能在定义时**赋值**
   final基本类型变量：存储的**数据**不能被改变
   final引用类型变量：存储的**地址**不能被改变，但是地址所指向的对象的内容是可以被改变的
+
+
 
 # Java字符串
 
@@ -93,6 +97,8 @@ str.length()
 静态方法只能引用静态变量和静态方法。非静态方法能够引用静态变量和静态方法。
 静态的方法和变量属于类，非静态的变量和方法属于类的实例——对象
 
+
+
 ### 成员变量
 
 定义在类中、方法外
@@ -116,6 +122,8 @@ public class Book {
     }
 }
 ```
+
+
 
 ### 内部类
 
@@ -260,8 +268,6 @@ public class OuterClass {
 
 
 
-
-
 **使用内部类实现接口**
 ```java
 public class Test {
@@ -270,6 +276,8 @@ public class Test {
     }
 }
 ```
+
+
 
 ### 方法
 
@@ -299,6 +307,8 @@ public class Test {
   ```
 
 - **局部变量**：定义在方法内、代码块内的变量
+
+
 
 ### 代码块
 
@@ -330,9 +340,13 @@ public class ClassA {
 }
 ```
 
+
+
 ### 构造器
 
 C++中的构造函数，最好写上一个无参的构造器（因为不会像C++那样自动生成）
+
+
 
 ## 单例设计模式
 
@@ -372,6 +386,8 @@ public class Temp {
     }
 }
 ```
+
+
 
 ## 继承
 
@@ -457,6 +473,8 @@ ClassB.f(): GO
 - toString() 将一个对象返回为字符串形式
 - equals() 比较两个对象的实际内容是否相等。“==”比较的时两个变量引用的是不是同一个对象
 
+
+
 ### 方法重写
 
 继承之后子类可以重写方法
@@ -469,6 +487,8 @@ ClassB.f(): GO
 - 使用**@Override**注解，可以制定java编译器，检查方法重写的格式是否正确，提高代码可读性。
 - 重写的方法返回值类型必须与被重写方法的返回值类型一样或者范围更小。
 - 私有方法、静态方法不能被重写。
+
+
 
 ### 对象类型的转换
 
@@ -496,6 +516,8 @@ myobject instanceof MyClass
 // 判断变量引用的对象是否为某类的实例
 ```
 
+
+
 ## 多态
 
 目标：一个方法可以供很多其他的类使用。继承就是一种方式。
@@ -503,6 +525,8 @@ myobject instanceof MyClass
 **对象多态**：一个类可以有多个子类，如学生老师都是人
 
 **行为多态**：多个类有同一种方法，但是不同类有不同的实现方式，如人两条腿走，狗四条腿走
+
+
 
 ### 抽象类与接口
 
@@ -1598,7 +1622,11 @@ Stream流使用步骤
 ![image-20240313150013141](./images/image-20240313150013141.png)
 ![image-20240313150214455](./images/image-20240313150214455.png)
 
-### FileInputStream
+
+
+### 文件流
+
+#### FileInputStream
 
 构造器：`FileInputStream(String pathName)`使用路径名来实例文件输入流、`FileInputStream(File fileName)`使用File对象创建文件输入流
 
@@ -1613,7 +1641,7 @@ Stream流使用步骤
 - `read()`读取汉字输出会乱码
 - 使用完后必须关闭
 
-#### 一次性读取全部字节
+**一次性读取全部字节**
 
 - `public int read(byte[] buffer)`
 - `public byte[] readAllBytes() throws IOException`
@@ -1623,7 +1651,9 @@ Stream流使用步骤
 - 如果文件过大创建的字符数组也会过大产生溢出
 - 读写文本文件更适合用字符流，字节流适合做数据的转移
 
-### FileOutputStream
+
+
+#### FileOutputStream
 
 以内存为基准吧内存中的数据以字节的形式写出到文件
 
@@ -1643,7 +1673,9 @@ Stream流使用步骤
 
 
 
-## 缓冲流BufferReader、BufferWriter
+### 缓冲流
+
+BufferedReader、BufferedWriter
 
 ```java
 br = new BufferedReader(new FileReader("example.txt"));
@@ -1664,6 +1696,284 @@ bw.write("Moonshot AI");
 
 - 使用时记得关闭
 - BfferWriter构造器中可设置是否追加，不追加就是覆盖了
+
+
+
+#### 字节缓冲流
+
+**使用场景**
+
+- 处理二进制文件，如图像、音频、视频等。
+- 读写原始字节数据，不涉及字符编码转换。
+
+**构造语法**
+
+```java
+BufferedInputStream bis = new BufferedInputStream(new FileInputStream("file.bin"));
+BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("file.bin"));
+```
+
+**注意事项**
+
+- 字节缓冲流不处理字符编码，适用于任何形式的二进制数据。
+- 它们通常与 `FileInputStream` 和 `FileOutputStream` 等基础字节流一起使用。
+- 缓冲区大小默认为 8192 字节，但可以在构造函数中指定不同的大小。
+
+**示例**
+
+```java
+try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream("image.png"));
+     BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("image_copy.png"))) {
+    byte[] buffer = new byte[8192];
+    int bytesRead;
+    while ((bytesRead = bis.read(buffer)) != -1) {
+        bos.write(buffer, 0, bytesRead);
+    }
+} // 流和资源会自动关闭
+```
+
+
+
+#### 字符缓冲流
+
+**使用场景**
+
+- 处理文本文件，如读取和写入纯文本文件。
+- 需要字符编码和解码的场景。
+
+**语法**
+
+```java
+BufferedReader br = new BufferedReader(new FileReader("file.txt"));
+BufferedWriter bw = new BufferedWriter(new FileWriter("file.txt"));
+
+// 可以设定缓冲区大小
+BufferedReader br = new BufferedReader(new FileReader(filePath), bufferSize)
+BufferedWriter bw = new BufferedWriter(new FileWriter(filePath), bufferSize)
+    
+// 可以设定字符集
+String filePath = "example.txt";
+Charset charset = Charset.forName("UTF-8"); // 指定字符集
+
+// 使用 InputStreamReader 包装 FileReader，并指定字符集
+BufferedReader br = new BufferedReader(new InputStreamReader(new FileReader(filePath), charset))
+BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileWriter(filePath), charset))
+```
+
+**方法**
+
+- **`readLine()`**：按行读取文本，并返回一个字符串，如果到达文件末尾，则返回 `null`。
+
+- **`read()`**：一次性读取整个文件的内容到一个字符串中。
+
+- `read(char[] cbuf, int off, int len)`：指定一个字符数组 `cbuf` 作为缓冲区，以及要读取的字符的偏移量 `off` 和最大长度 `len`。它从文件中读取最多 `len` 个字符到缓冲区中，并将实际读取的字符数量作为返回值，没数据时返回-1。
+
+  ```java
+  char[] buffer = new char[1024];
+  int bytesRead;
+  while ((bytesRead = br.read(buffer, 0, buffer.length)) != -1) {
+      String s = new String(buffer, 0, bytesRead);
+      System.out.println(s);
+  }
+  ```
+
+- `read(CharBuffer target)`：`CharBuffer` 类作为参数。它将内容读入 `CharBuffer` 对象中，并将读取的字符数量作为返回值。
+
+  ```java
+  CharBuffer buffer = CharBuffer.allocate(1024);
+  int bytesRead;
+  while ((bytesRead = br.read(buffer)) != -1) {
+      buffer.flip(); // 准备读取数据
+      String s = buffer.toString();
+      System.out.println(s);
+      buffer.clear(); // 准备下一轮写入
+  }
+  ```
+
+**性能比较**
+
+- **缓冲流的性能优于原始流**：由于缓冲流减少了系统调用的次数，它们在处理大量数据时通常比原始流更快。在实际开发中，推荐使用缓冲流来操作文件，以提高程序的运行效率。
+- **缓冲区大小的影响**：缓冲流的性能也受到缓冲区大小的影响。较大的缓冲区可以进一步提高性能，但也可能增加内存的使用。因此，应根据具体的应用场景和数据量来选择合适的缓冲区大小。
+
+
+
+### 打印流
+
+**`PrintStream`**
+
+- `PrintStream` 是字节流，用于处理字节输出。它是 `OutputStream` 的子类，并且提供了多种 `print` 方法来输出数据。
+- 它可以被创建为输出到控制台（`System.out`）或其他文件或输出流。
+- 例子：`PrintStream out = new PrintStream(new FileOutputStream("output.txt"));`
+
+**`PrintWriter`**
+
+- `PrintWriter` 是字符流，用于处理字符输出。它是 `Writer` 的子类，并且也提供了多种 `print` 方法。
+- 与 `PrintStream` 类似，`PrintWriter` 也可以输出到控制台（`System.out`）、文件或其他字符输出流。
+- 例子：`PrintWriter writer = new PrintWriter(new FileWriter("output.txt"));`
+
+**注意**：
+
+- **自动换行**：使用 `println` 方法时，打印流会自动添加行分隔符（在 Windows 系统中是 `\r\n`，在 Unix/Linux 系统中是 `\n`），并将输出缓冲区的内容刷新到输出目的地。
+- **格式化输出**：打印流支持简单的格式化输出，例如使用 `printf` 方法可以输出格式化的字符串。
+- **缓冲机制**：打印流通常具有缓冲机制，这意味着数据不会立即写入目的地，而是存储在缓冲区中，直到缓冲区满或者显式调用 `flush` 方法。
+- **关闭流**：虽然 `PrintStream` 和 `PrintWriter` 都实现了 `Closeable` 接口，但在大多数情况下，不需要显式关闭这些流，因为它们通常会被系统自动关闭。
+- **字符集问题**
+
+```java
+String filePath = "example.txt";
+Charset charset = Charset.forName("UTF-8"); // 指定字符集为 UTF-8
+
+// 使用指定字符集的 PrintWriter
+PrintWriter pw = new PrintWriter(new FileWriter(filePath), charset);
+pw.write("你好，世界！");
+```
+
+
+
+### 数据流
+
+IO流体系
+![image-20240313220132767](./images/image-20240313220132767.png)
+
+**DataOutputStream（数据输出流）**
+	允许把数据可其类型一并写出。
+
+构造器：`public DataOutputStream(OutputStream out)`：包装基础的字节输出流创建数据输出流
+
+方法：
+
+- `public final void writeByte(int v) throws IOException`：将byte类型的数据写入字节输出流
+- `public final void writeInt(int v) throws IOException`：将int类型的数据写入字节输出流
+- `public final void writeDouble(Double v) throws IOException`：将Double类型的数据写入字节输出流
+- `public final void writeUTF(String str) throws IOException`：将字符串数据以UTF-8编码写入字节输出流
+- `public void write(int/byte[]/byte[]一部分)`：支持写字节数据出去
+
+**DataInputStream（数据输入流）**
+	用于读取数据输出流写出去的数据
+
+构造器：`public DataInputStream(InputStream is)`：包装基础的字节输出流创建数据输出流
+
+方法：
+
+- `public final byte readByte() throws IOException`：读取字节数据返回
+- `public final int readInt() throws IOException`：读取int类型数据返回
+- `public final Double readDouble() throws IOException`：读取Double类型数据返回
+- `public final String readUTF() throws IOException`：读取字符串（UYF-8）返回
+- `public final byte readInt()/read(byte[])`：支持读取字节数据
+
+注意：
+
+- 数据类型上，读的顺序要和写的顺序一致
+
+
+
+### 序列化流
+
+对象序列化：把java对象写到文件中，`ObjectOutputStream`
+对象反序列化：把文件中的java对象读取出来`ObjectInputStream`
+是字节流的子类。
+
+**序列化流**
+
+构造器：`ObjectOutputStream out = new ObjectOutputStream(OutputStream out);`
+
+常用方法：
+
+- `void writeObject(Object obj)`: 将参数对象 `obj` 序列化并写入底层的输出流。在调用此方法之前，如果需要，可以调用 `defaultWriteObject` 方法来实现自定义的序列化行为。
+- `void flush()`: 刷新输出流，将所有缓冲的输出数据写入目标介质。
+- `void close()`: 关闭输出流。如果 `ObjectOutputStream` 封装了另一个输出流，那么关闭 `ObjectOutputStream` 也会关闭被封装的输出流。
+
+**反序列化流**
+
+构造器：`ObjectInputStream in = new ObjectInputStream(InputStream in);`
+
+方法：
+
+- `Object readObject()`: 从输入流中读取一个对象。返回一个 `Object` 类型的值，实际类型取决于序列化数据。
+- `int readInt()`: 从输入流中读取一个 `int` 类型的值。
+- `String readLine()`: 从输入流中读取一个字符串，直到行结束符（`'\n'`）。
+- `void close()`: 关闭输入流。如果 `ObjectInputStream` 封装了另一个输入流，那么关闭 `ObjectInputStream` 也会关闭被封装的输入流。
+
+注意事项：
+
+- 序列化和反序列化操作涉及到对象的状态转换，因此必须确保序列化的对象类实现了 `Serializable` 接口。
+- 为了确保序列化的兼容性，通常需要定义 `serialVersionUID` 字段。
+- 在反序列化过程中，必须确保尝试读取的对象与序列化时使用的对象类完全相同，否则会抛出异常。
+- 序列化流和反序列化流通常用于持久化存储和网络传输，但不适用于实时通信，因为它们是为了一次性的、完整的对象传输而设计的。
+- 在处理序列化流时，需要注意安全性问题，因为不信任的数据源可能导致安全漏洞，如 `ObjectInputStream` 的 `readObject` 方法可能会执行构造函数之外的任意代码。
+
+示例：
+
+```java
+import java.io.Serializable;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
+class MySerializableClass implements Serializable {
+    private static final long serialVersionUID = 1L; // 用于验证序列化的兼容性
+    private int id;
+    private String name;
+
+    public MySerializableClass(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    // Getter 和 Setter 方法
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "MySerializableClass{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+    }
+}
+
+
+public class SerializationDemo {
+    public static void main(String[] args) {
+        // 创建一个 MySerializableClass 实例
+        MySerializableClass originalObject = new MySerializableClass(1, "Kimi");
+
+        // 序列化对象到文件
+        try (FileOutputStream fileOut = new FileOutputStream("mySerializableObject.ser");
+             ObjectOutputStream out = new ObjectOutputStream(fileOut)) {
+            out.writeObject(originalObject);
+            System.out.println("Object has been serialized to file.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 从文件反序列化对象
+        try (FileInputStream fileIn = new FileInputStream("mySerializableObject.ser");
+             ObjectInputStream in = new ObjectInputStream(fileIn)) {
+            MySerializableClass deserializedObject = (MySerializableClass) in.readObject();
+            System.out.println("Deserialized object's id: " + deserializedObject.getId());
+            System.out.println("Deserialized object's name: " + deserializedObject.getName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
 
 
 
@@ -1728,3 +2038,54 @@ public class CopyFile {
 }
 ```
 
+
+
+## 自动关闭源
+
+**使用场景**：
+
+- 任何**需要自动关闭资源**的场景，比如文件读写、数据库操作、网络连接等。
+- 当你使用完资源后，需要显式调用 `close()` 方法关闭资源，以释放系统资源时。
+
+在这些情况下都可以通过代码实现确保源在使用后确保被关闭。
+
+**实现方法**
+
+**`try-catch-finally`**：
+
+```java
+源类 源Name;
+try {
+    // 使用资源的代码
+    源Name = new 源类();
+} catch (Exception e) {
+    // 异常处理代码
+} finally {
+    if (源Name != null) {
+        try {
+            源Name.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**`try-with-resouce`**：
+
+```java
+try (ResourceType resource = new ResourceType()) {
+    // 使用资源的代码
+} catch (Exception e) {
+    // 异常处理代码
+}
+```
+
+`try-with-resouce`使用注意事项：
+
+- **资源必须是自动关闭的**：使用 `try-with-resources` 的资源必须实现 `AutoCloseable` 或 `Closeable` 接口。
+- **多个资源**：可以声明多个资源，它们将按照逆序关闭。即最后一个声明的资源会第一个关闭，这有助于避免在关闭一个资源时依赖另一个尚未关闭的资源。
+- **不允许在 `try` 块中再声明同类型的资源**：因为 `try-with-resources` 会自动关闭声明的资源，如果在 `try` 块中再次声明同名的资源，会导致立即关闭之前声明的资源。
+- **不能使用 `try-catch` 资源**：`try-with-resources` 语句中的资源不能用于 `catch` 块中。
+- **确保资源正确关闭**：虽然 `try-with-resources` 会自动关闭资源，但在 `try` 块中仍然可以显式调用 `close()` 方法。但是，如果这样做了，需要确保资源不会在 `try` 块的末尾再次关闭，以避免 `IllegalStateException`。
+- **异常处理**：如果资源的 `close()` 方法抛出异常，它会被尝试添加到当前正在处理的异常的 `suppressed` 列表中。如果 `try` 块中已经有一个异常被捕获，`close()` 方法抛出的异常不会阻止 `try` 块中异常的传播。
