@@ -13,7 +13,7 @@ JVM时java所有方法、类的上层
 - 程序计数器
   可以看作是当前线程所执行的字节码的**行号指示器**。字节码解释器工作时就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理和线程恢复等基础功能都需要依赖这个计数器来完成。
 
-![img](./images/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9qaW1teXN1bi5ibG9nLmNzZG4ubmV0,size_16,color_FFFFFF,t_70.png)
+![img](./images/image-20240313151333333.png)
 
 # Java变量
 
@@ -1597,3 +1597,14 @@ Stream流使用步骤
 
 ![image-20240313150013141](./images/image-20240313150013141.png)
 ![image-20240313150214455](./images/image-20240313150214455.png)
+
+### FileInputStream
+
+构造器：`FileInputStream(String pathName)`使用路径名来实例文件输入流
+
+方法：
+
+- `public int read()`每次读取一个字节返回，若没有数据可读会返回-1
+- `public int read(byte[] buffer)`每次用一个字节数组去读取数据，返回字节数组读取了多少个字节，没有数据可读会返回-1
+
+读取数据的性能差

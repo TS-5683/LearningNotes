@@ -3,33 +3,36 @@
 
 
 import os
+import re
 
+def read_all_text_files(directory):
+    lineSet = set()
+    for fileName in os.listdir(directory):
+        if os.path.isfile(os.path.join(directory, fileName)):
+            with open(fileName, encoding='utf-8') as f:
+                for line in f:
+                    if re.search(r'images', line, re.IGNORECASE):
+                        lineSet.add(line.strip())
+    return lineSet
 
-# 判断文本文件fileName是否包含关键词word
-def inFile(word:str ,fileName:str) -> bool:
-    file = open(fileName, encoding='utf-8')
-    if word in file.read(): 
-        file.close()
-        return True
-    file.close()
-    return False
 
 current_directory = os.getcwd()
-imgList = os.listdir('images')
-fileList = [f for f in os.listdir(current_directory) if 
-            os.path.isfile(os.path.join(current_directory, f))]
+print("开始扫描\n---------------------")
+n = 0
+
+# 读取所有文本文件到lineSet
+lineSet = read_all_text_files(current_directory)
 
 # 图片循环
+imgList = os.listdir('images')
 for imgName in imgList:
-    flag = False
-    for file in fileList:
-        if inFile(imgName, file):
-            flag = True
-            break
-    if not flag:
+    if not any(re.search(imgName, line, re.IGNORECASE) for line in lineSet):
         try:
-            os.remove('images\\'+imgName)
-            print('删除图片：'+imgName+' 成功')
+            os.remove(os.path.join('images', imgName))
+            n += 1
+            print(f'删除图片：{imgName} 成功')
         except Exception as e:
-            print("删除图片："+imgName+" 失败\n",e)
+            print(f"删除图片：{imgName} 失败\n{e}")
 
+print("\n---------------------")
+print(f"扫描结束，删除图片数量：{n}")
