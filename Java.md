@@ -2514,14 +2514,56 @@ Callable（一个泛型接口）：可以直接返回线程任务返回的数据
 ## Thread类常用方法
 
 - `public void run()`：线程的任务方式（不能多线程）
+
 - `public void start()`：启动线程
+
 - `public string getName()`：获取当前线程的名称，即Thread索引
+
 - `public void setName(String name)`：为线程设置名称
+
 - `public static Thread currentThread()`：获取当前执行的线程对象
+
 - `public static void sleep(long time)`：让当前执行的线程休眠多少毫秒
+
 - `public final void join()...`：让调用当前这个方法的线程先执行完
 
-构造器：
+- `public void interrupt()`：用于中断线程的执行。当一个线程被中断时，它会收到一个中断请求，但不一定会立即停止执行。`interrupt()`方法的作用是向线程发送中断请求，而线程本身需要检查是否被中断，并采取适当的行动来响应中断请求。
+
+  ```java
+  public class Main {
+      public static void main(String[] args) {
+          Thread myThread = new Thread(new MyRunnable());
+          myThread.start();
+          
+          // 在一段时间后中断线程
+          try {
+              Thread.sleep(1000);
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+          myThread.interrupt();
+      }
+  }
+  
+  class MyRunnable implements Runnable {
+      @Override
+      public void run() {
+          while (!Thread.currentThread().isInterrupted()) {
+              System.out.println("Thread is running...");
+              try {
+                  Thread.sleep(200);
+              } catch (InterruptedException e) {
+                  // 线程被中断，可以在这里进行一些清理操作或者直接退出循环
+                  Thread.currentThread().interrupt(); // 重新设置中断状态
+                  System.out.println("Thread is interrupted. Exiting...");
+                  return;
+              }
+          }
+      }
+  }
+  ```
+
+**构造器**：
 
 - `public Thread(String name)`：可以为当前线程指定名称
 - `public Thread(Runnable target)`：封装Runnable对象成为线程对象
@@ -2615,7 +2657,171 @@ class Account {
 }
 ```
 
+#### 读写锁
+
+`ReentrantReadWriteLock` 类可以实现一个线程读数据时其他线程也能读但只能读，一个线程写数据时其他数据不能读写。
+
+- **读锁（Read Lock）**：当一个线程需要读取数据时，它会获取一个读锁。只要没有线程持有写锁，多个线程可以同时获取读锁并进行读操作。在读锁被持有期间，其他线程也可以获取读锁，但不能获取写锁。
+
+- **写锁（Write Lock）**：当一个线程需要修改数据时，它会获取一个写锁。写锁是独占的，这意味着在写锁被持有期间，没有线程可以获取读锁或写锁。这确保了写操作不会与其他读或写操作冲突，从而保证了数据的一致性。
+
+  ```java
+  import java.util.concurrent.locks.ReentrantReadWriteLock;
+  
+  public class SharedResource {
+      private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+      private Object sharedState;
+  
+      public void write(Object newState) {
+          rwLock.writeLock().lock(); // 获取写锁
+          try {
+              sharedState = newState;
+              // ... 执行写操作
+          } finally {
+              rwLock.writeLock().unlock(); // 释放写锁
+          }
+      }
+  
+      public Object read() {
+          rwLock.readLock().lock(); // 获取读锁
+          try {
+              return sharedState;
+              // ... 执行读操作
+          } finally {
+              rwLock.readLock().unlock(); // 释放读锁
+          }
+      }
+  }
+  ```
+
 
 
 ## 线程通信
 
+
+线程之间通过某种方式互相告知自己的状态以互相协调，达到以下效果：
+
+1. **资源共享**：线程通信使线程间可以协调对共享资源的访问，避免冲突和不一致性。
+2. **任务协调**：线程通信可以帮助不同的线程在执行任务时进行协调。例如，一个线程可能需要等待另一个线程完成某项任务后才能开始执行，或者多个线程需要在特定条件下同时开始执行任务。
+3. **同步执行**：线程通信提供了同步执行的手段，确保程序的执行顺序符合预期。通过线程间的等待和通知机制，可以实现复杂的同步逻辑。
+4. **提高效率**：通过线程池和任务队列，可以有效地管理和复用线程，减少线程创建和销毁的开销。
+5. **避免阻塞**：在某些情况下，线程通信可以用来避免不必要的阻塞。例如，使用非阻塞算法或者信号量机制，可以让线程在等待条件满足时不会被长时间挂起。
+6. **构建并发模型**：线程通信是构建复杂并发模型的基础。例如，在生产者-消费者问题、读者-写者问题等经典并发问题中，线程通信是实现解决方案的关键。
+7. **异常处理**：在多线程程序中，一个线程可能会遇到异常情况。线程通信可以让其他线程得知这一情况，并采取相应的补救措施。
+8. **解耦设计**：线程通信可以帮助解耦系统的不同部分，使得每个线程都可以独立地执行其任务，而不需要关心其他线程的具体实现。
+
+Object类的等待和唤醒方法：
+
+- `void wait()`：让当前线程等待并释放锁占的锁，知道另一个线程调用`notify()`方法或`notifyAll()`方法
+- `void notify()`：唤醒正在等待的单个线程
+- `void nitifyAll()`：唤醒正在等待的所有线程
+
+**注意**：这些方法应该使用当前同步锁对象进行调用
+
+```java
+public class Market {
+    private final int capacity = 10; // 市场的最大容量
+    private int count = 0; // 当前市场的存货数量
+
+    // 生产产品的方法
+    public void produce() throws InterruptedException {
+        synchronized (this) {
+            while (count == capacity) {
+                // 如果市场已满，生产者等待
+                wait();
+            }
+            count++;
+            System.out.println(Thread.currentThread().getName() + " 生产了产品，当前库存: " + count);
+            // 唤醒所有等待的消费者
+            notifyAll();
+        }
+    }
+
+    // 消费产品的方法
+    public void consume() throws InterruptedException {
+        synchronized (this) {
+            while (count == 0) {
+                // 如果市场为空，消费者等待
+                wait();
+            }
+            count--;
+            System.out.println(Thread.currentThread().getName() + " 消费了产品，当前库存: " + count);
+            // 唤醒所有等待的生产者
+            notifyAll();
+        }
+    }
+
+    public static void main(String[] args) {
+        Market market = new Market();
+
+        // 创建生产者线程
+        Thread producer1 = new Thread(() -> {
+            for (int i = 0; i < 20; i++) {
+                try {
+                    market.produce();
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        Thread producer2 = new Thread(() -> {
+            for (int i = 0; i < 20; i++) {
+                try {
+                    market.produce();
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        // 创建消费者线程
+        Thread consumer1 = new Thread(() -> {
+            for (int i = 0; i < 20; i++) {
+                try {
+                    market.consume();
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        Thread consumer2 = new Thread(() -> {
+            for (int i = 0; i < 20; i++) {
+                try {
+                    market.consume();
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        // 启动线程
+        producer1.start();
+        producer2.start();
+        consumer1.start();
+        consumer2.start();
+
+        // 等待所有线程执行完成
+        producer1.join();
+        producer2.join();
+        consumer1.join();
+        consumer2.join();
+    }
+}
+```
+
+
+
+## 线程池
+
+一种可以复用线程的技术
+
+出现的背景：
+	用户每发起一个请求，后台就需要创建一个新线程来处理，下次新任务来了肯定又要创建新线程处理的，而创建新线程的**开销是很大**的，并且请求过多时，肯定会产生大量的线程出来，这样会严重影响系统的性能。
+
+![image-20240314195422619](./images/image-20240314195422619.png)
