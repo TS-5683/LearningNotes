@@ -2089,3 +2089,533 @@ try (ResourceType resource = new ResourceType()) {
 - **不能使用 `try-catch` 资源**：`try-with-resources` 语句中的资源不能用于 `catch` 块中。
 - **确保资源正确关闭**：虽然 `try-with-resources` 会自动关闭资源，但在 `try` 块中仍然可以显式调用 `close()` 方法。但是，如果这样做了，需要确保资源不会在 `try` 块的末尾再次关闭，以避免 `IllegalStateException`。
 - **异常处理**：如果资源的 `close()` 方法抛出异常，它会被尝试添加到当前正在处理的异常的 `suppressed` 列表中。如果 `try` 块中已经有一个异常被捕获，`close()` 方法抛出的异常不会阻止 `try` 块中异常的传播。
+
+
+
+## 特殊文件
+
+### 属性文件
+
+**.properties**文件。其内容是一些键值对，键不重复。
+![image-20240314125739603](./images/image-20240314125739603.png)
+
+- 是一个Map集合类，但是一般不会当集合使用
+- 核心作用是用来代表属性文件，通过它可以读写property文件
+
+构造器：`public Propertie()`：构造空的集合对象
+
+读取property文件方法：
+
+- `public void load(InputStream is)`：通过字节输入流读取属性文件的键值对数据
+- `public void load(Reader reader)`：通过字符输入流读取属性文件中的键值对数据
+- `pulic String getProperty(String key)`：根据键取值
+- `public Set<String> stringPropertyNames()`：获取全部键的集合
+
+示例：
+
+```java
+Properties pro = new Properties();
+pro.load(new FileReader("path/fileName"));
+System.out.println(pro.getProperty("key1"));
+
+Set<String> keys = pro.stringPropertyNames();
+for(String key :keys) {
+    String value = pro.getProperty(key);
+    System.out.println(key + " --------> " + value)
+}
+
+pro.forEach((k,v) -> {
+    System.out.println(k + " -----> " + v);
+});
+```
+
+写入文件方法
+
+`.setProperty(String key, String value)`：用Properties对象存储一些键值对
+
+`.store(OutputStream out, String comments)`：保存当前properties对象到文件，`comments`为注释
+
+
+
+### XML文件
+
+本质上是一种数据的格式，可以用来存储复杂的数据结构和数据关系
+
+特点：
+
+- <标签名>，一般承兑出现
+- 只能有一个根标签
+- 标签可以有属性
+- 后缀.xml 
+
+
+
+
+
+# 日志
+
+![image-20240314133108164](./images/image-20240314133108164.png)
+
+logback日志框架
+
+![image-20240314133238316](./images/image-20240314133238316.png)
+
+日志：记录系统的运行信息
+
+步骤：
+
+- 导入logback框架
+  ![image-20240314133405174](./images/image-20240314133405174.png)
+- 将核心配置文件logbak.xml复制到src目录下
+- 创建Logback框架提供的Logger对象，使用其调用方法可以记录
+  `public static final Logger LOGGER = LoggerFactory.getLogger("className");`
+
+示例：
+
+```java
+public class LogBackTest {
+    public static final Logger LOGGER = LoggerFactory.getLogger("LogBackTest=");
+    
+    public static void main(String[] args) {
+        try {
+            LOOGER.info("除法方法开始执行-----");
+            chu(10, 0);
+            LOGGER.errot("chu方法执行成功------")；
+        } catch (Exception e) {
+            LOGGER.error("chu方法执行失败：" + e.roString());
+        }
+	}
+
+	public static void chu(int a, int b) {
+        LOGGER.debug("参数a："+a);
+        LOGGER.debug("参数b："+b);
+        int c = a/b;
+        LOGGER.info("结果："+c);
+    }
+}
+```
+
+
+
+
+
+# Java多线程
+
+## 多线程创建方式
+
+### 继承Thread类
+
+`java.lang.Thread`，thread子类必须覆盖Thread类的run方法.
+
+**步骤**：
+
+- 定义一个子类继承Thread类，重写run()方法
+
+- 创建子类对象
+
+- 必须调用线程对象的start()方法启动线程（执行的还是run方法）
+
+  ```java
+  class PrimeThread extends Thread {
+      long minPrime;
+      PrimeThread(long minPrime) {this.minPrime = minPrime;}
+      
+      @Override
+      public void run() {
+          // ……
+      }
+  }
+  
+  PrimeThread p = new PrimeThread(143);
+  p.start();
+  ```
+
+  ```java
+  class MyThread extends Thread {
+      @Override
+      public void run() {
+          for (int i = 1; i <= 5; i++) {
+              System.out.println("MyThread线程输出："+i);
+          }
+      }
+  }
+  
+  public class ThreadTest {
+      public static void main(String[] args) {
+          Thread t = new MyThread();
+          t.start();
+          
+          for (int i = 1; i <= 5; i++) {
+              System.out.println("main线程输出："+i);
+          }
+      }
+  }
+  
+  /*输出：
+  main线程输出：1
+  main线程输出：2
+  MyThread线程输出：1
+  main线程输出：3
+  main线程输出：4
+  MyThread线程输出：2
+  MyThread线程输出：3
+  main线程输出：5
+  MyThread线程输出：4
+  MyThread线程输出：5
+  */
+  ```
+
+- **优点**：代码简单
+- **缺点**：已经继承，无法继承其他类，不利于功能的扩展
+
+**注意：**
+
+- 启动线程必须使用start()方法，否则还是在主线程运行run方法
+- 不要把主线程任务放在启动子线程之前，否则先完成主线程任务之后才会执行子线程任务
+
+
+
+## 实现Runnable接口
+
+```java
+class PrimeThread implements Runnable {
+    long minPrime;
+    PrimeThread(long minPrime) {this.minPrime = minPrime;}
+    
+    public void run() {
+        ……
+    }
+}
+
+public class Runner {
+    public static void main(String[] args) {
+        PrimeThread p = new PrimeThread(143);
+        new Thead(p).start();
+        
+        // main线程任务……
+    }
+}
+```
+
+**步骤：**
+
+- 定义一个线程任务类RunName实现Runnable接口并重写run()方法
+
+- 创建RunName对象
+
+- 把RunName对象封装为Thread
+
+- 调用线程对象的start()方法启动线程
+
+  ```java
+  public class Runner {
+      public static void main(String[] args) {
+          Runnable r = new MyRunnable();
+          new Thread(r).start();
+          for (int i = 0; i < 5; i++) {
+              System.out.println("main线程输出：" + i);
+          }
+      }
+  }
+  
+  class MyRunnable implements Runnable {
+      @Override
+      public void run() {
+          for (int i = 0; i < 5; i++) {
+              System.out.println("子线程输出：" + i);
+          }
+      }
+  }
+  ```
+
+- **优点**：任务类只是实现接口，还能继承其他类
+
+### 实现Runnable的内部类写法
+
+- 创建Runnable的匿名内部类对象，
+- 再交给Thread线程对象，通过start()启动
+
+```java
+public class Runner {
+    public static void main(String[] args) {
+        Runnable r1 = new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 5; i++) {
+                    System.out.println("匿名子线程输出：" + i);
+                }
+            }
+        };
+        new Thread(r1).start();
+        for (int i = 0; i < 5; i++) {
+            System.out.println("main线程输出：" + i);
+        }
+    }
+}
+```
+
+简化
+
+```java
+public class Runner {
+    public static void main(String[] args) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < 5; i++) {
+                    System.out.println("子线程输出：" + i);
+                }
+            }
+        }).start();
+        for (int i = 0; i < 5; i++) {
+            System.out.println("main线程输出：" + i);
+        }
+    }
+}
+```
+
+Lambda方式简化
+
+```java
+public class Runner {
+    public static void main(String[] args) {
+        new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("子线程输出：" + i);
+            }
+        }).start();
+        for (int i = 0; i < 5; i++) {
+            System.out.println("main线程输出：" + i);
+        }
+    }
+}
+```
+
+### 实现Callable接口
+
+前两种方式的缺陷：
+
+- 假如线程执行完毕后有一些数据需要返回，他们重写的run方法均不能直接返回结果，需要在任务类中定义变量存储任务执行的结果，在任务完成之后取值。
+
+  ```java
+  // 一个使用两个线程完成1到n的累加的代码
+  
+  public class SumCalculation implements Runnable {
+  
+      private int start;
+      private int end;
+      private int sum;
+  
+      public SumCalculation(int start, int end, int sum) {
+          this.start = start;
+          this.end = end;
+          this.sum = sum;
+      }
+  
+      @Override
+      public void run() {
+          for (int i = start; i <= end; i++) {
+              sum += i;
+          }
+      }
+  
+      public int getSum() {
+          return sum;
+      }
+  
+      public static void main(String[] args) {
+          int n = 10; // 可以修改为任何需要的n值
+          int mid = n / 2;
+  
+          // 创建第一个线程计算1到n/2的累加和
+          SumCalculation sumCalculation1 = new SumCalculation(1, mid, 0);
+          Thread thread1 = new Thread(sumCalculation1);
+  
+          // 创建第二个线程计算n/2+1到n的累加和
+          SumCalculation sumCalculation2 = new SumCalculation(mid + 1, n, 0);
+          Thread thread2 = new Thread(sumCalculation2);
+  
+          // 启动线程
+          thread1.start();
+          thread2.start();
+  
+          try {
+              // 等待两个线程执行完成
+              thread1.join();
+              thread2.join();
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+  
+          // 输出最终的累加和
+          int totalSum = sumCalculation1.getSum() + sumCalculation2.getSum();
+          System.out.println("The sum from 1 to " + n + " is: " + totalSum);
+      }
+  }
+  ```
+
+  
+
+Callable（一个泛型接口）：可以直接返回线程任务返回的数据
+
+步骤：
+
+- 创建任务对象
+
+  - 定义一个类实现Callable接口，重写cal方法，封装要做的事情，和要返回的数据。
+  -  把Callable类型的对象封装成FutureTask(线程任务对象)
+
+- 把线程任务对象交给Thread对象
+
+- 调用线程对象的start()启动线程
+
+- 线程执行完毕后、通过FutureTask对象的的get方法去获取线程任务执行的结果。
+
+  ```java
+  // 两个线程分工完成累加任务
+  
+  import java.util.concurrent.Callable;
+  import java.util.concurrent.FutureTask;
+  
+  public class Runner {
+      public static void main(String[] args) throws Exception {
+          Callable<Integer> call1 = new MyCall(1, 50),
+                  call2 = new MyCall(51, 100);
+          FutureTask<Integer> f1 = new FutureTask<>(call1),
+                  f2 = new FutureTask<>(call2);
+          Thread t1 = new Thread(f1), t2 = new Thread(f2);
+          t1.start();
+          t2.start();
+          System.out.println(f1.get()+f2.get());
+      }
+  }
+  
+  class MyCall implements Callable<Integer> {
+      private int head, end;
+  
+      public MyCall(int head, int end) {
+          this.head = head;
+          this.end = end;
+      }
+      
+      @Override
+      public Integer call() throws Exception {
+          Integer num = Integer.valueOf("0");
+          for (int i = head; i <= end; i++) {
+              num += i;
+          }
+          return num;
+      }
+  }
+  ```
+
+
+
+## Thread类常用方法
+
+- `public void run()`：线程的任务方式（不能多线程）
+- `public void start()`：启动线程
+- `public string getName()`：获取当前线程的名称，即Thread索引
+- `public void setName(String name)`：为线程设置名称
+- `public static Thread currentThread()`：获取当前执行的线程对象
+- `public static void sleep(long time)`：让当前执行的线程休眠多少毫秒
+- `public final void join()...`：让调用当前这个方法的线程先执行完
+
+构造器：
+
+- `public Thread(String name)`：可以为当前线程指定名称
+- `public Thread(Runnable target)`：封装Runnable对象成为线程对象
+- `public Thread(Runnable target,String name)`：封装Runnable对象成为线程对象，并指定线程名称
+
+
+
+## 线程安全
+
+多个线程同时操作同一个共享资源且存在修改行为时可能出现业务安全问题
+
+### 线程同步
+
+→解决线程安全问题的方案
+
+- 只读的行为那么别人也可以读但不可以改
+- 有改行为时别人不可以读不可以改
+
+#### 同步代码块
+
+作用：把访问共享资源的核心代码加锁，以保证线程安全
+
+```java
+synchronized(同步锁) {
+    ……
+}
+//“同步锁”是共享一份资源的对象要使用同一个同步锁，它的类型是Object，甚至可以用字面量
+```
+
+**原理**：每次只允许一个线程加锁后访问，执行完毕后自动解锁，其他线程才可以访问
+
+**注意**：
+
+- 对于当前同时执行的线程来说，同步锁必须是同一个（同一个对象）
+- 锁对象不能随意选择唯一的对象（如字面量）
+- 建议使用共享资源作为锁对象，对于实例方法建议使用this，静态方法建议使用字节码对象（类名.class）作为锁对象
+
+#### 同步方法
+
+把访问共享资源的核心方法上锁，以保证线程安全
+
+```java
+[public] [static] synchronized 返回类型 funcName(形参列表) {
+    ……
+}
+```
+
+**原理：**每次只能一个线程进入，执行完毕后自动解锁
+
+- 同步方法其实底层也是有隐式锁对象的，只是锁的范围是整个方法代码。
+- 如果方法是实例方法:同步方法默认用this作为的锁对象，
+- 如果方法是静态方法:同步方法默认用类名.class作为的锁对象。
+
+#### Lock
+
+Lock是接口，不能直接实例化，可以采用它的实现类ReentrantLock来构建Lock锁对象。
+
+- 一个共享资源要有自己的Lock，
+- 而且多数时候定义为常量，
+- 使用时用try，在finally中关闭，一个线程出错了别影响其他线程
+
+```java
+class Account {
+    private String cardId;
+    private double money;
+    private final Lock lk = new ReentrantLock();
+    
+    public Account(String id, double money) {
+        this.cardId = id;
+        this.money = money;
+    }
+    
+    public void getMoney(double money) {
+        String name = Thread.currentThread().getName();
+        try {
+            lk.lock();
+            if (this.money >= money) {
+            	lk.lock();
+            	System.out.println(name+"来取钱"+money+"成功");
+            	this.money -= money;
+            	System.out.println("余额："+this.money);
+            } else {
+                System.out.println(name+"来取钱"+money+"失败，余额不足："+this.money);
+            }
+        } catch (Exception e) {
+            System.out.println(e.toString);
+        } finally {
+            lk.unlock();
+        }
+    }
+}
+```
+
+
+
+## 线程通信
+
