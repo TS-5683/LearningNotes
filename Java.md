@@ -2825,3 +2825,53 @@ public class Market {
 	用户每发起一个请求，后台就需要创建一个新线程来处理，下次新任务来了肯定又要创建新线程处理的，而创建新线程的**开销是很大**的，并且请求过多时，肯定会产生大量的线程出来，这样会严重影响系统的性能。
 
 ![image-20240314195422619](./images/image-20240314195422619.png)
+
+### 线程池类
+
+`ExecutorServive`接口，实现类：`ThreadPoolExecutor`
+
+构造器：`ThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory, RejectedExecution handler)`
+
+- `corePoolSize`：指定线程池的核心线程数量。→正式员工数
+- `maximumPoolSize`：指定线程池的最大线程数量 → 最大员工数
+- `keepAliveTime`：指定临时线程的存活时间 → 临时工空闲多久被开除
+- `unit`：指定临时线程存货的时间单位
+- `workQueue`：指定线程池的任务队列
+- `threadFactory`：用于创建线程的”线程工厂“
+- `handler`：指定线程池的任务拒绝策略（线程都在忙，任务队列也满了，新任务来了怎么办）
+
+![image-20240314202902908](./images/image-20240314202902908.png)
+
+`new ThreadPoolExecutor`：
+
+```java
+ExecutorService pool = new ThreadPoolExecutor(
+    3, 5, 2,
+    TimeUnit.SECONDS,
+	new ArrayBlockingQueue<>(10),
+	Executors.defaultThreadFactory(),
+	new ThreadPoolExecutor.AbortPolicy()
+);
+```
+
+**临时线程创建时机**：新任务提交时发现核心线程都在忙，任务队列也满了，而且还可以创建临时线程，此时才会创建临时线程
+
+**拒接任务时机**：核心线程和临时线程都在忙，任务队列也满了，新的任务过来时会被拒绝
+
+**常用方法**：
+
+- `void execute(Runnable command)`：执行Runnable任务
+- `Future<T> submit(Callable<T> task)`：执行Callable任务，返回未来任务对象，用于获取线程返回的结果
+- `void  shutdown()`：全部任务完成后关闭线程池
+- `List<Runnable> shutdownNow()`：立即关闭线程池，停止正在执行的任务，并返回队列中未执行的任务
+
+**线程池处理Runnable任务**
+
+
+
+**线程池处理Callable任务**
+
+
+
+### Executors工具类实现线程池
+
