@@ -2694,6 +2694,46 @@ class Account {
   }
   ```
 
+#### 乐观锁
+
+前面几种锁为悲观锁：对于线程安全是悲观的，所以一上来就枷锁了。这样在保证线程安全的同时降低了并行的效率。但是在实践中发现发生安全问题的频率并不高，所以没必要这么悲观，完全可以乐观一点，并不一上来就上锁。
+
+原理是在一个线程在运算后修改源数据之前比较源数据和运算前读取到的数据是否一致，一致则放心的保存修改，否则重新读取、运算、检查知道保存修改。
+
+可以用原子类来实现乐观锁。
+
+```java
+import java.util.concurrent.atomic.AtomicStampedReference;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class OptimisticLockingExample {
+    private final AtomicStampedReference<Integer> balance =
+        new AtomicStampedReference<>(0, new AtomicInteger(0));
+
+    public boolean deposit(int amount, int expectedStamp) {
+        int currentStamp = balance.getStamp();
+        if (currentStamp == expectedStamp) {
+            int newBalance = balance.getReference() + amount;
+            return balance.compareAndSet(balance.getReference(), newBalance, currentStamp, currentStamp.incrementAndGet());
+        }
+        return false;
+    }
+
+    public boolean withdraw(int amount, int expectedStamp) {
+        int currentStamp = balance.getStamp();
+        if (currentStamp == expectedStamp && balance.getReference() >= amount) {
+            int newBalance = balance.getReference() - amount;
+            return balance.compareAndSet(balance.getReference(), newBalance, currentStamp, currentStamp.incrementAndGet());
+        }
+        return false;
+    }
+
+    public int getBalance(int stamp) {
+        return balance.getReference();
+    }
+}
+```
+
 
 
 ## 线程通信
@@ -2858,6 +2898,11 @@ ExecutorService pool = new ThreadPoolExecutor(
 
 **拒接任务时机**：核心线程和临时线程都在忙，任务队列也满了，新的任务过来时会被拒绝
 
+- `ThreadPoolExecutor.AbortPolicy`：直接抛出异常，是默认值
+- `ThreadPoolExecutor.DiscardPolicy`：丢弃任务但是不抛异常（不推荐）
+- `ThreadPoolExecutor.DiscardOldestPolicy`：抛弃队列中等待醉酒的任务然后把当前任务加入到队列
+- `ThreadPoolExecutor.CallerRunsPolicy`：由主线程调用任务对象的`run()`方法绕过线程池直接执行（什么！？老板在厨房炒菜？）
+
 **常用方法**：
 
 - `void execute(Runnable command)`：执行Runnable任务
@@ -2867,11 +2912,239 @@ ExecutorService pool = new ThreadPoolExecutor(
 
 **线程池处理Runnable任务**
 
+```java
+ExecutorService pool = new ThreadPoolExecutor(
+    3, 5, 2,
+    TimeUnit.SECONDS,
+	new ArrayBlockingQueue<>(10),
+	Executors.defaultThreadFactory(),
+	new ThreadPoolExecutor.AbortPolicy()
+);
 
+Runnable target = new MyRunnable();
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+pool.excute(target);
+```
 
 **线程池处理Callable任务**
+
+```java
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SumRunner {
+    public static void main(String[] args) throws Exception {
+        ExecutorService pool = new ThreadPoolExecutor(
+            3, 5, 2,
+            TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(10),
+            Executors.defaultThreadFactory(),
+            new ThreadPoolExecutor.AbortPolicy()
+        );
+
+        // 将任务分成5个部分，每个任务处理2000个数字
+        int chunkSize = 2000;
+        List<Callable<Integer>> tasks = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            int start = i * chunkSize + 1;
+            int end = (i + 1) * chunkSize;
+            tasks.add(new MyCall(start, end));
+        }
+
+        // 执行任务并收集结果
+        List<Future<Integer>> futures = new ArrayList<>();
+        for (Callable<Integer> task : tasks) {
+            futures.add(pool.submit(task));
+        }
+        
+        int totalSum = 0;
+        for (Future<Integer> future : futures) {
+            totalSum += future.get();
+        }
+
+        pool.shutdown();
+        System.out.println("The sum of numbers from 1 to 10000 is: " + totalSum);
+    }
+
+    static class MyCall implements Callable<Integer> {
+        private int start, end;
+        
+        public MyCall(int start, int end) {
+            this.start = start;
+            this.end = end;
+        }
+        
+        @Override
+        public Integer call() {
+            int sum = 0;
+            for (int i = start; i <= end; i++) {
+                sum += i;
+            }
+            return sum;
+        }
+    }
+}
+```
 
 
 
 ### Executors工具类实现线程池
+
+Executors是一个线程池的工具类，提供了很多静态方法返回不同特点的线程池对象：
+
+- `public static Executorservice newFixedThreadPool(int nThreads)`：创建固定线程数量的线程池，如果某个线程因为执行异常而结束，那么线程池会补充一个新线程替代它。
+- `public static ExecutorService newsingleThreadExecutor()`：创建只有一个线程的线程池对象，如果该线程出现异常而结束，那么线程池会补充一个新线程。
+- `public static ExecutorService newCachedThreadPool()`：线程数量随着任务增加而增加，如果线程任务执行完毕且空闲了60s则会被回收掉。
+- `public static ScheduledExecutorService newScheduledThreadPool(int corePoolsize)`：创建一个线程池，可以实现在给定的延迟后运行任务，或者定期执行任务。
+
+注意：
+
+- 大型并发系统环境中使用Executors如果不注意可能会出现系统风险。默认、自动的一些设定可能会造成一些不人性化的情况，还是自定义的设定更加灵活
+
+
+
+推荐的线程数量：
+
+- 计算密集型：CPU最大线程数+1
+- IO密集型：CPU最大线程数*2
+
+
+
+# 并发和并行
+
+**进程**：正在运行的程序即一个独立的进程
+
+**线程**：属于进程，一个进程中可以同时运行很多个线程
+
+- **并发**：进程中的线程是由CPU负责调度执行的，但是CPU能同时处理的线程数量是有限的，为了保证全部线程都能往前执行，CPU会轮询为系统的每个线程服务，由于CPU切换的速度很快，给我们的感觉这些线程在同时执行，即并发
+- **并行**：同一时刻，同时又多个线程在被CPU调度执行。
+
+电脑的CPU一般是并发和并行同时进行的
+
+
+
+## 线程的生命周期
+
+**Java线程的状态**
+
+```java
+public enum State {
+    NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, TERMINATED
+}
+```
+
+- **新建（New）**:
+
+  - 线程对象被创建后，线程处于新建状态。
+  - 在这个阶段，线程尚未开始运行，`start()`方法尚未被调用。
+
+- **可运行（Runnable）**:
+
+  - 当调用线程的`start()`方法后，线程进入可运行状态。
+  - 可运行状态包括两种情况：运行（Running）和等待操作系统分配处理器资源（Runnable but not currently running）。
+  - 线程在可运行状态下可能会执行，也可能会被操作系统调度器挂起，等待CPU时间。
+
+- **阻塞（Blocked）**:
+
+  - 线程正在等待获取一个监视器锁（例如，等待进入同步块或同步方法）。
+  - 当一个线程尝试调用一个已经由另一个线程持有的对象的`wait()`方法时，该线程会进入阻塞状态。
+  - 阻塞状态的线程无法执行，直到它获取到所需的锁或者被中断。
+
+- **等待（Waiting）**:
+
+  - 线程正在无限期地等待另一个线程执行一个特定的（同步）操作。
+  - 线程处于等待状态时，会一直等待直到另一个线程调用`notify()`或`notifyAll()`方法。
+  - 等待状态可以通过调用`wait()`，`join()`或`LockSupport.park()`方法进入。
+
+- **超时等待（Timed Waiting）**:
+
+  - 线程正在等待另一个线程执行一个特定的操作，但这种等待有一个最长等待时间限制。
+
+  - 线程可以通过调用带有超时参数的`wait()`，`join()`，`sleep()`或条件变量的`await()`方法进入超时等待状态。
+  - 超时时间一到，线程将自动转换回可运行状态。
+
+- **终止（Terminated）**:
+
+  - 线程的运行方法（`run()`）已经执行完毕，或者线程被中断，且`run()`方法执行了`return`语句。
+
+  - 一旦线程进入终止状态，它就无法被重新启动或恢复。
+
+![image-20240314234213826](./images/image-20240314234213826.png)
+
+<small>sleep时不会解锁，wait时会解锁</small>
+
+
+
+
+
+# Java网络编程
+
+网络通信架构
+
+- CS架构：客户端——服务器
+- BS架构：浏览器——服务器（不需要写客户端）
+
+
+
+**IP**：设备在网络中的唯一标识。网络协议地址。IPv4（32位）、IPV6（128位）
+	域名经过DNS服务器解码为IP
+	内网外网：子网掩码相关
+	127.0.0.1：代表自己设备
+
+**端口**：应用程序在设备中的唯一标识
+
+**协议**：连接和数据在网络中传输的规则
+
+![image-20240316153002080](./images/image-20240316153002080.png)
+
+**Java InetAddress 类实现IP**
+
+常用方法：
+
+- `public static InetAddress getLocalHost()`：获取本机IP，返回InetAddress对象
+- `public static InetAddress getByname(String host)`：根据ip地址或域名构造对象
+- `public String getHostAddress`：获取ip地址对象的ip地址信息
+- `public staitc getHostName`：获取该IP地址对象对应的主机名  
+- `public boolean isReachable(int timeout)`：在制定的毫秒内判断主机与该ip主机是否能连通
+
+
+
+**网络协议**
+
+![image-20240316154812046](./images/image-20240316154812046.png)
+
+<small>参考“网络协议.md”</small>
+
+
+
+## Java & UDP
+
+**`java.net.DatagramSocket`**：用于创建客户端、服务端
+
+- `public Datagramsocket()`：创建客户端的Socket对象，系统会随机分配一个端口号
+
+- `public Datagramsocket(int port)`：创建服务端的Socket对象，并指定端口号
+
+- `public void send(DatagramPacket dp)`：发送数据包
+
+- `public void receive(DatagramPacket p)`：使用数据包接收数据
+
+- `public DatagramPacket(byte[] buf, int length, InetAddress address, int port)`：创建发出去的数据包对象
+
+- `public DatagramPacket(byte[]buf,int length)`：创建用来接收数据的数据包
+
+- `public int getLength()`：获取数据包实际接收到的字节个数
+
+  
 
