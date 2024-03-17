@@ -3130,21 +3130,196 @@ public enum State {
 
 ## Java & UDP
 
-**`java.net.DatagramSocket`**：用于创建客户端、服务端
+**快速入门——单次收发**
+
+**`java.net.DatagramSocket`**：用于创建客户端、服务端、收发数据包
 
 - `public Datagramsocket()`：创建客户端的Socket对象，系统会随机分配一个端口号
-
 - `public Datagramsocket(int port)`：创建服务端的Socket对象，并指定端口号
-
 - `public void send(DatagramPacket dp)`：发送数据包
-
 - `public void receive(DatagramPacket p)`：使用数据包接收数据
 
-- `public DatagramPacket(byte[] buf, int length, InetAddress address, int port)`：创建发出去的数据包对象
+**`DatagramPacket`**：创建数据包
 
+- `public DatagramPacket(byte[] buf, int length, InetAddress address, int port)`：创建发出去的数据包对象
 - `public DatagramPacket(byte[]buf,int length)`：创建用来接收数据的数据包
 
-- `public int getLength()`：获取数据包实际接收到的字节个数
+**`public int getLength()`**：获取数据包实际接收到的字节个数
 
-  
+```java
+package ThreadStudy;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        DatagramSocket socket = new DatagramSocket();  // 无参的构造器会随机分配端口号
+
+        byte[] bytes = "hello world".getBytes();
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
+                InetAddress.getLocalHost(), 6666);
+        socket.send(packet);
+        System.out.println("客户端数据发送完毕。");
+        socket.close();
+    }
+}
+```
+
+```java
+package ThreadStudy;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+
+public class Server  {
+    public static void main(String[] args) throws Exception {
+        DatagramSocket socket = new DatagramSocket(6666);
+
+        // 创建用于接收数据的数据包对象
+        byte[] buffer = new byte[1024 * 64];
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        socket.receive(packet);
+        String sr = new String(buffer, 0, packet.getLength());
+        System.out.println(sr);
+        socket.close();
+    }
+}
+```
+
+先运行Server类，再运行Client类，结果：
+	Client：客户端数据发送完毕。
+	Server：hello world
+
+- `packet.getAddress()`：返回数据包发送端的IP
+- `packet.getPort()`：返回数据包发送端的端口号
+
+### Java & UTP 多收多发
+
+给单收发的代码套上死循环即可。
+
+```java
+package ThreadStudy;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+
+public class Server  {
+    public static void main(String[] args) throws Exception {
+        DatagramSocket socket = new DatagramSocket(6666);
+        String msg;
+        while (true) {
+            byte[] buffer = new byte[1024 * 64];
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+            socket.receive(packet);
+            msg = new String(buffer, 0, packet.getLength());
+            System.out.println(packet.getAddress() + ": " + msg);
+        }
+    }
+}
+```
+
+```
+package ThreadStudy;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        DatagramSocket socket = new DatagramSocket(); // 无参的构造器会随机分配端口号
+
+        Scanner sc = new Scanner(System.in);
+        String msg;
+        byte[] bytes;
+        while (true) {
+            System.out.println("请输入信息：");
+            msg = sc.nextLine();
+
+            if ("exit".equals(msg)) {
+                System.out.println("期待再见");
+                socket.close();
+                sc.close();
+                break;
+            }
+
+            bytes = msg.getBytes();
+            DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
+                InetAddress.getLocalHost(), 6666);
+            socket.send(packet);
+        }
+    }
+}
+```
+
+
+
+## Java & TCP
+
+**`java.net.Socket`**
+
+客户端开发：`Socket`
+
+- `public Socket(String host, int port)`：根据指定的服务器ip、端口号请求与服务器建立连接，连接通过即获得了客户端Socket
+- `public OutputStream getOutputStream()`：获得字节输出流对象
+- `public InputStream getInputStream()`：获得字节输入流对象
+
+服务端开发：`ServerSocket`
+
+- `public ServerSocket(int port)`：为服务器注册端口
+- `public Socket accept()`：阻塞等待客户端的连接请求，一旦成功连接即返回服务端的Socket对象
+
+**单收发示例**
+
+```java
+package ThreadStudy;
+
+import java.io.DataInputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server  {
+    public static void main(String[] args) throws Exception {
+        // 创建ServerSocket对象
+        ServerSocket ss = new ServerSocket(8888);
+        // 等待连接
+        Socket socket = ss.accept();  // 阻塞等待连接
+        // 创建输入流
+        DataInputStream dis = new DataInputStream(socket.getInputStream());
+        // 使用数据输出流读取数据
+        System.out.println(socket.getRemoteSocketAddress() + ": " + dis.readUTF());  // 阻塞等待客户端发信息
+        dis.close();
+        socket.close();
+        ss.close();
+    }
+}
+```
+
+```java
+package ThreadStudy;
+
+import java.io.DataOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        // 创建Socket对象的同时请求连接
+        Socket socket = new Socket("127.0.0.1", 8888);
+        // 创建字节输出流用来发送信息
+        OutputStream os = socket.getOutputStream();
+        // 包装为数据输出流
+        DataOutputStream dos = new DataOutputStream(os);
+        // 开始写数据发出去
+        dos.writeUTF("hello");
+        dos.close();
+        socket.close();
+    }
+}
+```
+
+**多手法示例**
 
