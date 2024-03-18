@@ -3255,6 +3255,8 @@ public class Client {
 }
 ```
 
+以上示例可以实现多个客户端连接服务器
+
 
 
 ## Java & TCP
@@ -3321,5 +3323,135 @@ public class Client {
 }
 ```
 
-**多手法示例**
+**多收发示例**
+
+```java
+package ThreadStudy;
+
+import java.io.DataOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        Scanner sc = new Scanner(System.in);
+
+        // 创建Socket对象的同时请求连接
+        Socket socket = new Socket("127.0.0.1", 8888);
+        // 创建字节输出流用来发送信息
+        OutputStream os = socket.getOutputStream();
+        // 包装为数据输出流
+        DataOutputStream dos = new DataOutputStream(os);
+        // 开始写数据发出去
+        System.out.println("请输入：（\"exit\"可主动退出程序）");
+        String msg = sc.nextLine();
+        while (!msg.equals("exit")) {
+            try {
+                dos.writeUTF(msg);
+                System.out.println("发送成功！");
+            } catch (Exception e) {
+                System.out.println("发送失败: " + e.toString());
+            } finally {
+                System.out.println("请输入：（\"exit\"可主动退出程序）");
+                msg = sc.nextLine();
+            }
+        }
+        dos.writeUTF(msg);
+        sc.close();
+        dos.close();
+        socket.close();
+    }
+}
+```
+
+```java
+package ThreadStudy;
+
+import java.io.DataInputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server  {
+    public static void main(String[] args) throws Exception {
+        // 创建ServerSocket对象
+        ServerSocket ss = new ServerSocket(8888);
+        // 等待连接
+        Socket socket = ss.accept();  // 阻塞等待连接
+        // 创建输入流
+        DataInputStream dis = new DataInputStream(socket.getInputStream());
+        String msg = dis.readUTF();
+
+        while (!msg.equals("exit")) {
+            try {
+                System.out.println(socket.getRemoteSocketAddress() + ": " + msg);
+            } catch (Exception e) {
+                System.out.println(e.toString());
+            } finally {
+                msg = dis.readUTF();
+            }
+        }
+        System.out.println("客户端主动断开");
+        dis.close();
+        socket.close();
+        ss.close();
+    }
+}
+```
+
+### TCP & Java & 多个客户端连接服务器
+
+![image-20240318143443510](./images/image-20240318143443510.png)
+
+（服务器）让主线程只负责接收连接请求请开通连接管道，具体的通信都让子线程来做
+
+```java
+package ThreadStudy;
+
+import java.io.DataInputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server  {
+    public static void main(String[] args) throws Exception {
+        System.out.println("--------服务器启动成功--------");
+        ServerSocket ss = new ServerSocket(8888);
+
+        while (true) {
+            new MyThread(ss.accept()).start();
+            System.out.println("main: " + "someone come");
+        }
+    }
+}
+
+class MyThread extends Thread {
+    private Socket socket;
+
+    MyThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            while (true) {
+                try {
+                    System.out.println(socket.getRemoteSocketAddress()+": "+dis.readUTF());
+                } catch (Exception e) {
+                    System.out.println("offLine: " + socket.getRemoteSocketAddress());
+                    dis.close();
+                    socket.close();
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("offline: " + socket.getRemoteSocketAddress());
+        }
+    }
+}
+```
+
+### 案例之群聊
 
