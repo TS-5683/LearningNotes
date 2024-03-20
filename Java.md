@@ -3455,3 +3455,560 @@ class MyThread extends Thread {
 
 ### 案例之群聊
 
+![image-20240318184715782](./images/image-20240318184715782.png)
+
+```java
+package ThreadStudy;
+
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.util.Scanner;
+import java.io.DataInputStream;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        Scanner sc = new Scanner(System.in);
+
+        // 创建Socket对象的同时请求连接
+        Socket socket = new Socket("127.0.0.1", 8888);
+        // 创建一个线程随时从cocket中接收服务器发送的内容
+        new ClientReader(socket).start();
+        // 包装为数据输出流
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        // 开始写数据发出去
+        System.out.println("print: \"exit\"for exiting");
+        String msg = sc.nextLine();
+        while (!msg.equals("exit")) {
+            try {
+                dos.writeUTF(msg);
+                System.out.println("ok");
+            } catch (Exception e) {
+                System.out.println("wrong: " + e.toString());
+            } finally {
+                System.out.println("print: \"exit\"for exiting");
+                msg = sc.nextLine();
+            }
+        }
+        dos.writeUTF(msg);
+        sc.close();
+        dos.close();
+        socket.close();
+    }
+}
+
+class ClientReader extends Thread {
+    private Socket socket;
+
+    public ClientReader(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            while (true) {
+                try {
+                    String msg = dis.readUTF();
+                    System.out.println(socket.getRemoteSocketAddress() + ": " + msg);
+                } catch (Exception e) {
+                    System.out.println("offLine: " + socket.getRemoteSocketAddress());
+                    dis.close();
+                    socket.close();
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("offline: " + socket.getRemoteSocketAddress());
+        }
+    }
+}
+```
+
+```java
+package ThreadStudy;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Server {
+    public static List<Socket> onlineSockets = new ArrayList<>();
+    public static void main(String[] args) throws Exception {
+        System.out.println("--------服务器启动成功--------");
+        ServerSocket ss = new ServerSocket(8888);
+
+        while (true) {
+            Socket socket = ss.accept();
+            onlineSockets.add(socket);
+            new MyThread(socket).start();
+            System.out.println("main: " + socket.getRemoteSocketAddress() + " come");
+        }
+    }
+}
+
+class MyThread extends Thread {
+    private Socket socket;
+
+    MyThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            while (true) {
+                try {
+                    String msg = dis.readUTF();
+                    System.out.println(socket.getRemoteSocketAddress() + ": " + msg);
+                    sendMsgAll(msg);
+                } catch (Exception e) {
+                    System.out.println("offLine: " + socket.getRemoteSocketAddress());
+                    dis.close();
+                    socket.close();
+                    Server.onlineSockets.remove(socket);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("offline: " + socket.getRemoteSocketAddress());
+        }
+    }
+    
+    public void sendMsgAll(String msg) throws Exception {
+        for (Socket socket : Server.onlineSockets) {
+            if (!socket.equals(this.socket)) {
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF(msg);
+                dos.flush();
+            }
+        }
+    }
+}
+```
+
+### BS简易示例
+
+- CS架构：客户端+服务端
+- BS架构：浏览器+服务器
+
+![image-20240319152949998](./images/image-20240319152949998.png)
+
+```java
+package ThreadStudy;
+
+import java.io.DataOutputStream;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server {
+    public static void main(String[] args) throws Exception {
+        ServerSocket serverSocket = new ServerSocket(8080);
+
+        while (true) {
+            Socket socket = serverSocket.accept();
+            PrintStream ps = new PrintStream(socket.getOutputStream());
+            ps.println("HTTP/1.1 200 OK");
+            ps.println("cONTENT-tYPE:text/html;charset=UTF-8");
+            ps.println();
+            ps.println("good");
+            new ServerReaderThread(socket).start();
+            ps.close();
+            socket.close();
+        }
+    }
+}
+
+class ServerReaderThread extends Thread{
+    private Socket socket;
+
+    public ServerReaderThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            DataOutputStream dos = new DataOutputStream(
+                    socket.getOutputStream());
+            dos.writeUTF("helloo");
+            dos.close();
+            socket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+使用线程池进行优化：
+
+![image-20240319153940098](./images/image-20240319153940098.png)
+
+```java
+package ThreadStudy;
+
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+class Server {
+    public static void main(String[] args) throws Exception {
+        System.out.println("-----Server PowerOn-----");
+        ServerSocket serverSocket = new ServerSocket(8080);
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(16, 16, 0,
+                TimeUnit.SECONDS, new ArrayBlockingQueue<>(8), Executors.defaultThreadFactory(),
+                new ThreadPoolExecutor.AbortPolicy());
+        while (true) {
+            Socket socket = serverSocket.accept();
+            pool.execute(new ServerReader(socket));
+        }
+    }
+}
+
+class ServerReader implements Runnable {
+    private Socket socket;
+
+    public ServerReader(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            PrintStream ps = new PrintStream(socket.getOutputStream());
+            ps.println("HTTP/1.1 200 OK");
+            ps.println("cONTENT-tYPE:text/html;charset=UTF-8");
+            ps.println();
+            ps.println("good");
+            ps.close();
+            socket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+
+
+
+
+# 单元测试——Junit
+
+针对最小的功能单元（方法）进行测试即单元测试，编写测试代码对其进行正确性测试
+
+之前的单元测试问题：
+
+- 只能在main方法编写测试代码，去调用其他方法进行测试。
+- 无法实现自动化测试，一个方法测试失败，可能影响其他方法的测试。
+- 无法得到测试的报告，需要程序员自己去观察测试是否成功。
+
+**Junit单元测试框架**
+
+可以用来对方法进行测试，它是第三方公司开源出来的(很多开发工具已经集成了junit框架，比如IDEA)
+
+优点
+
+- 可以灵活的编写测试代码，可以针对某个方法执行测试，也支持一键完成对全部方法的自动化测试，且各自独立。
+- 不需要程序员去分析测试的结果，会自动生成测试报告出来。
+
+步骤：
+
+- 导入jar包
+- 定义对应的测试类并为每个业务方法编写对应的测试方法（必公共无参无返回）
+
+**断言**：如果运行错误（不是报错）显示的内容，语法：在测试方法末尾写`Assert.assertEquals(String masg, Object except, Object actual)`
+
+```java
+import org.junit.Assert;
+import org.junit.Test;
+
+public class StringUtilTest {
+    @Test 
+    public void testPrintNumber() {
+        StringUtil.printNumber("Jams");
+    }
+
+    @Test
+    public void testGetMaxIndex() {
+        int num = StringUtil.getMaxIndex(null);
+        Assert.assertEquals("算错了！", -1, num);
+    }
+}
+```
+
+**Junit单元测试框架常用注解**
+
+- `@Test`：测试类中的方法必须用它才能成为测试方法
+- `@Befotre`：用来修饰一个实例方法，这个方法会在每一个测试方法执行之前执行一次
+- `@After`：用来修饰一个实例方法，会在每一个测试方法执行之后执行一次
+- `@BeforeClass`：用来修饰一个静态方法，会在所有测试方法之前执行一次
+- `@AfterClass`：用来修饰一个静态方法，会在所有测试方法执行之后执行一次
+
+测试方法执行前：常用于初始化资源
+
+测试方法执行后：常用于释放资源
+
+```java
+public class StringUtilTest {
+    @BeforeClass
+    public static void testBeforeClass() {
+        System.out.println("testBreforeClass Going\n---------------------");
+    }
+
+    @Before
+    public void testBefore() {
+        System.out.println("test @Before Going");
+    }
+
+    @Test 
+    public void testPrintNumber() {
+        StringUtil.printNumber("Jams");
+    }
+
+    @Test
+    public void testGetMaxIndex() {
+        System.out.println("testGetMaxIndex Going");
+        int num = StringUtil.getMaxIndex(null);
+        Assert.assertEquals("算错了！", -1, num);
+    }
+}
+/*
+调试控制台输出：
+testBreforeClass Going
+---------------------
+test @Before Going
+名字的长度是：4
+test @Before Going
+testGetMaxIndex Going
+*/
+```
+
+
+
+
+
+# 反射
+
+功能：获取、操作类的信息
+
+反射的步骤：
+
+1. 加载类，获取类的字节码：Class对象
+2. 获取类的构造器：Constructor对象
+3. 获取类的成员变量：Field对象
+4. 获取类的成员方法：Method对象
+
+**获取Class对象**三种方式
+
+- Class c1 = 类名.class
+- 调用Class提供的方法：`public static Class ForName(String package)`
+- Object提供的方法：`public Class getClass()`
+
+## 获取类中的构造器
+
+- `Constructor<?>[] getConstructors()`：获取全部public构造器
+
+- `Constructor<?>[] getDeclaredConstructors()`：获取全部构造器
+
+- `Constructor<?>[] getConstructor(Class<?>... parameterTypes)`：获取某个public构造器
+
+  ```java
+  Class c = Cat.class;
+  Constructor cons = c.getConstructor();  // 获取无参构造器
+  Constructor cons1 = c.getConstructor(String.class);  // 获取有参数构造器 
+  ```
+
+- `Constructor<?> getDelaredConstructor(Class<?>... parameterTypes)`：获取某个构造器
+
+**获取构造器的作用：初始化对象返回**
+
+方法：
+
+- `T newInstance(Object... initargs)`：调用此构造器对象表示的构造器并传入参数完成对象的初始化并返回
+- `public void setAccessible(boolean flag)`：设为true时禁止检查访问控制（暴力反射）<small>使用之后可以访问private的成员</small>
+
+## 获取类的成员变量
+
+- `public Field[]getFields()`：获取类的全部public成员变量
+- `public Field[] getDeclaredFields()`：获取类的全部成员变量
+- `public Field getField(String name)`：获取类的某个public成员变量
+- `public Field getDeclaredField(String name)`：获取类的某个成员变量
+
+```java
+public class Runner {
+    public static void main(String[] args) throws Exception {
+        Class c1 = Student.class;
+        Field[] fields = c1.getDeclaredFields();
+        for (Field field : fields) {
+            System.out.println(field.getName() + "---->" + field.getType());
+        }
+    }
+}
+
+class Student {
+    private String name;
+    private int age;
+
+    public Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+}
+/*运行结果：
+name---->class java.lang.String
+age---->int*/
+```
+
+作用：赋值、取值
+
+- `void set(object obj,object value)`：赋值
+- `object get(object obj)`：取值
+- `public void setAccessible(boolean flag)`：设置为true时禁用检查访问权限
+
+```java
+Class c = Car.class;
+Field fName = c.getDeclaredField("name");
+Car car1 = new Car;
+fName.setAccessible(true);
+fName.set(car1, "Benz1")
+System.out.println(car);
+```
+
+## 获取类的成员方法
+
+- `Method[]getMethods()`：获取类的全部public方法
+- `Method[]getDeclaredMethods()`：获取类的全部方法
+- `Method getMethod(String name,Class<?>... parameterTypes)`：获取类的某个public方法
+- `Method getDeclaredMethod(String name,Class<?>...parameterTypes)`：获取类的某个方法
+
+```java
+Class c = Cat.class;
+Method[] methods = c.getDeclaredMethods();
+for (method:methods) {
+    System.out.println(method.getName()+' '
+            +method.getParameterCount()+" "
+    		+method.getReturnTypr())
+	}
+}
+```
+
+作用：执行
+
+- `public object invoke(object obj,object... args)`：触发某个对象的该方法执行。
+- `public void setAccessible(boolean flag)`：设置为true，表示禁止检查访问控制(暴力反射)
+
+```java
+Class c = Cat.class;
+Cat cat = new Cat;
+Method run = c.getDeclaredMethod("eat", String.class);  // 方法名，参数类型
+run.setAccessible(true);
+int num = run.invoke(cat, "apple");
+System.out.println(num);
+```
+
+## 反射的作用、应用
+
+1. 基本作用：可以得到、操作一个类的全部成分
+2. 可以破坏封装性
+3. 适合用于做java框架，主流的框架都会基于反射设计出一些通用的功能
+
+![image-20240320234655841](./images/image-20240320234655841.png)
+
+步骤：
+
+1. 定义一个方法可以接收任意对象
+2. 每收到一个对象后使用反射获取该对象的Class对象后获取全部成员变量
+3. 遍历成员变量然后提取成员变量的具体值
+4. 把成员变量名、值写到文件
+
+```java
+// 运行类
+public class Go {
+    @Test
+    public void save() throws Exception {
+        Student s1 = new Student("吴彦祖", 20, 'M');
+        Teacher t1 = new Teacher("Jams");
+        
+        ObjectFrame.saveObject(s1);
+        ObjectFrame.saveObject(t1);
+    }
+}
+
+// Student类
+public class Student {
+    private int age;
+    private String name, hobby;
+    private char sex;
+    private double height;
+
+    public Student() {
+    };
+    
+    public Student(String name, int age, char sex) {
+        this.name = name;
+        this.age = age;
+        this.sex = sex;
+    }
+}
+
+// Teacher类
+public class Teacher {
+    private String name;
+    private double salary;
+
+    public Teacher() {
+    };
+
+    public Teacher(String name) {
+        this.name = name;
+    }
+}
+
+// ObjectFrame框架
+public class ObjectFrame {
+    public static void saveObject(Object obj) throws Exception {
+        Class c = obj.getClass();
+        String className = c.getSimpleName();
+        PrintStream ps = new PrintStream(new FileOutputStream("ObjectInfo.txt", true));
+        ps.println("------"+className+"-----");
+        Field[] fields = c.getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            String name = field.getName();
+            String value = field.get(obj) + "";
+            ps.println(name + "=" + value);
+        }
+        ps.close();
+    }
+}
+```
+
