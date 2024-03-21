@@ -4012,3 +4012,120 @@ public class ObjectFrame {
 }
 ```
 
+
+
+
+
+# 注解
+
+- Java代码中的特殊标记如@Override、@Test等
+- 作用：让其他程序根据注解信息来确定怎么执行该程序
+- 注意：注解可以在类上、构造器上、方法上、成员变量上、参数上等位置  
+
+## 自定义注解
+
+```java
+public @interface 注解名称 {
+    public 属性类型 属性名() default 默认值;
+}
+```
+
+特殊属性名：value，如果注解中只有一个value，使用时value名称可以不写
+
+```java
+// MyAnno
+public @interface MyAnno {
+    String aaa();
+
+    String[] ccc();
+
+    boolean bbb() default true;
+}
+
+// MyAnno2
+public @interface MyAnno2 {
+    String value();
+
+    int age() default 23;
+}
+
+// AnnoTest
+@MyAnno(aaa = "jam", ccc = { "java", "txt" })
+@MyAnno2("kid")
+public class AnnoTest {
+    @MyAnno(aaa="jimi", bbb=false, ccc={"timi", "chik"})
+    public void test1() {
+
+    }
+}
+```
+
+## 注解的原理
+
+```java
+public @interface MyAnno {
+    String aaa();
+    String[] ccc();
+    boolean bbb() default true;
+}
+```
+
+反编译↓
+
+```java
+public interface MyAnno extends Annotation {
+    public abstract String aaa();
+    public abstract boolean bbb();
+    public abstract String[] ccc();
+}
+```
+
+使用时：
+
+```java
+@MyAnno(aaa="李四", bbb=true, ccc={"C++","Python"})
+public void run1() {}
+```
+
+- 注解的本质是接口，java中所有的注解都是继承了Annotation接口的
+- @注解(……)其实是一个实现类对象，实现了该注解以及Annotation接口
+
+## 元注解
+
+元注解即修饰注解的注解
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.METHOD})
+public @interface Test {}  // 上边的这俩货就是注解
+```
+
+![image-20240321154831188](./images/image-20240321154831188.png)
+
+## 注解的解析
+
+判断是否存在注解即注解的解析
+
+步骤：
+
+- 要解析谁上面的注解就应该先拿到谁
+- 比如要解析类上面的注解，则应该先获取该类的Class对象，再通过Class对象解析其上面的注解。
+- 比如要解析成员方法上的注解，则应该获取到该成员方法的Method对象，再通过Method对象解析其上面的注解。
+- Class 、Method、Field,Constructor、都实现了AnnotatedElement接口，它们都拥有解析注解的能力。
+
+`public Annotation[] getDeclaredAnnotations()`：获取当前对象上面的注解
+
+`public T getDeclaredAnnotation(class<T> annotationClass)
+`：获取指定的注解对象
+
+`public boolean isAnnotationPresent(class<Annotation> annotationClass)`：获取但前对象上是否存在某个注解
+
+
+
+
+
+# 动态代理
+
+使用场景：对象嫌身上干的事太多即可以通过代理来转移部分工作
+
+代理需要具有：对象有什么方法想被代理，代理就需要有对应的方法
