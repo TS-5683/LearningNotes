@@ -8,7 +8,7 @@ import re
 def read_all_text_files(directory):
     lineSet = set()
     for fileName in os.listdir(directory):
-        if os.path.isfile(os.path.join(directory, fileName)):
+        if os.path.isfile(os.path.join(directory, fileName)) and fileName.endswith('.md'):
             with open(fileName, encoding='utf-8') as f:
                 for line in f:
                     if re.search(r'images', line, re.IGNORECASE):
