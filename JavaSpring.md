@@ -377,3 +377,284 @@ bean 定义可以包含很多的配置信息，包括构造函数的参数，属
 Spring Bean 定义的继承与 Java 类的继承**无关**，但是继承的概念是一样的。可以定义一个父 bean 的定义作为模板，其他子 bean 就可以从父 bean 中继承所需的配置。
 
 当使用基于 XML 的配置元数据时，通过使用父属性，指定父 bean 作为该属性的值来表明子 bean 的定义。
+
+bean.xml
+
+![image-20240327104948538](./images/image-20240327104948538.png)
+
+HelloWorld.java
+
+```java
+package com.tutorialspoint;
+public class HelloWorld {
+   private String message1;
+   private String message2;
+   public void setMessage1(String message){
+      this.message1  = message;
+   }
+   public void setMessage2(String message){
+      this.message2  = message;
+   }
+   public void getMessage1(){
+      System.out.println("World Message1 : " + message1);
+   }
+   public void getMessage2(){
+      System.out.println("World Message2 : " + message2);
+   }
+}
+```
+
+HelloIndia.java，值得注意的是这里的java定义中并没有继承关系
+
+```java
+package com.tutorialspoint;
+ 
+public class HelloIndia {
+   private String message1;
+   private String message2;
+   private String message3;
+ 
+   public void setMessage1(String message){
+      this.message1  = message;
+   }
+ 
+   public void setMessage2(String message){
+      this.message2  = message;
+   }
+ 
+   public void setMessage3(String message){
+      this.message3  = message;
+   }
+ 
+   public void getMessage1(){
+      System.out.println("India Message1 : " + message1);
+   }
+ 
+   public void getMessage2(){
+      System.out.println("India Message2 : " + message2);
+   }
+ 
+   public void getMessage3(){
+      System.out.println("India Message3 : " + message3);
+   }
+}
+```
+
+MainApp.java
+
+```java
+package com.tutorialspoint;
+ 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+ 
+public class MainApp {
+   public static void main(String[] args) {
+      ApplicationContext context = new ClassPathXmlApplicationContext("Beans.xml");
+ 
+      HelloWorld objA = (HelloWorld) context.getBean("helloWorld");
+ 
+      objA.getMessage1();
+      objA.getMessage2();
+ 
+      HelloIndia objB = (HelloIndia) context.getBean("helloIndia");
+      objB.getMessage1();
+      objB.getMessage2();
+      objB.getMessage3();
+   }
+}
+```
+
+运行结果：
+
+```
+World Message1 : Hello World!
+World Message2 : Hello Second World!
+
+India Message1 : Hello India!
+India Message2 : Hello Second World!
+India Message3 : Namaste India!
+```
+
+也就是说在java类的层面上两个类并不存在继承关系，只是具有部分相同的属性。
+
+## Bean 定义模板
+
+可以创建一个 Bean 定义模板，不需要花太多功夫它就可以被其他子 bean 定义使用。在定义一个 Bean 定义模板时，不需要指定**类**的属性，而应该指定值为 **true** 的**抽象**属性即**abstract**，如下：
+
+```
+<bean id="beanTeamplate" abstract="true">
+	<property name="message1" value="Hello World!"/>
+	<property name="message2" value="Hello Second World!"/>
+	<property name="message3" value="Namaste India!"/>
+</bean>
+ 
+<bean id="helloIndia" class="com.tutorialspoint.HelloIndia" parent="beanTeamplate">
+	<property name="message1" value="Hello India!"/>
+	<property name="message3" value="Namaste India!"/>
+</bean>
+```
+
+父 bean 自身**不能被实例化**，因为它是不完整的，而且它也被明确地标记为抽象的。当一个定义是抽象的，它仅仅作为一个纯粹的模板 bean 定义来使用的，充当子定义的父定义使用。
+
+
+
+# 依赖注入
+
+依赖注入（Dependency Injection，简称DI）是一种设计模式，用于解决软件组件之间的耦合问题。在依赖注入的核心思想中，不再由组件自身在内部创建或查找其所依赖的其他组件（也就是依赖），而是通过外部容器或框架在创建组件时注入所需的依赖。这样做的目的是为了降低组件间的耦合度，提高组件的可重用性和可测试性，从而促进代码的模块化。
+
+**依赖**：
+
+```java
+public class TextEditor {
+   private SpellChecker spellChecker;  
+   public TextEditor() {
+      spellChecker = new SpellChecker();
+   }
+}
+```
+
+这个示例代码就相当于创建了一个TextEditor和SpellChecker的依赖关系。
+
+依赖注入主要包含以下几个**要素**：
+
+1. **依赖**：指一个类（或组件）需要另一个类（或组件）来完成其功能。
+2. **注入**：指依赖关系不是在类内部创建或查找，而是由外部容器（如Spring框架）在创建类实例时提供。
+3. **容器**：负责管理对象的生命周期和依赖关系的外部系统，它负责创建对象实例并注入依赖。
+
+依赖注入的**实现方式**主要有以下几种：
+
+1. **构造器注入**：通过类的构造器传入依赖项，是最推荐的注入方式，因为它保证了依赖项的不可变性和必要性。
+2. **Setter注入**：通过类的Setter方法或公共属性设置依赖项，这种方式允许可选的依赖项和运行时更改。
+3. **接口注入**：通过实现特定的注入接口，如Spring框架中的`ApplicationContextAware`，容器通过调用接口方法注入依赖项。
+4. **注解注入**：使用特定的注解（如Spring的`@Autowired`）来标记依赖项，容器根据注解自动注入。
+
+**依赖注入的意义**
+
+1. **降低耦合**：组件不需要知道如何创建或查找其依赖项，因此可以减少组件间的直接依赖。
+2. **提高可测试性**：由于依赖项是通过外部注入的，可以很容易地替换为Mock对象，便于进行单元测试。
+3. **增强灵活性**：通过改变注入的依赖项，可以轻松地改变组件的行为，而无需修改组件的代码。
+4. **促进模块化**：组件更加关注自身的职责，而不是依赖项的管理，从而使得软件系统更加模块化。
+5. **便于维护和扩展**：当系统需要变更或扩展时，依赖注入使得修改更加简单，因为依赖关系的变更通常只需要在容器配置中进行。
+
+| 依赖注入类型                             | 描述                                                         |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `Constructor-based dependency injection` | 当容器调用带有多个参数的构造函数类时，实现基于构造函数的 DI，每个代表在其他类中的一个依赖关系。 |
+| `Setter-based dependency injection`      | 通过在调用无参数的构造函数或无参数的静态工厂方法实例化 bean 之后容器调用 beans 的 setter 方法来实现. |
+
+使用有强制性依存关系的构造函数和有可选依赖关系的 setter 是一个好的做法。
+
+## Spring 基于构造器的依赖注入
+
+TextEditor.java
+
+```java  
+package com.tutorialspoint;
+public class TextEditor {
+   private SpellChecker spellChecker;
+   public TextEditor(SpellChecker spellChecker) {
+      System.out.println("Inside TextEditor constructor." );
+      this.spellChecker = spellChecker;
+   }
+   public void spellCheck() {
+      spellChecker.checkSpelling();
+   }
+}
+```
+
+SpellChecker.java
+
+```java
+package com.totoriaspoint;
+public class SpellChecker {
+    public SpellChecker(){
+      System.out.println("Inside SpellChecker constructor." );
+   }
+   public void checkSpelling() {
+      System.out.println("Inside checkSpelling." );
+   } 
+}
+```
+
+MainApp.java
+
+```java
+package com.tutorialspoint;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+public class MainApp {
+   public static void main(String[] args) {
+      ApplicationContext context = 
+             new ClassPathXmlApplicationContext("Beans.xml");
+      TextEditor te = (TextEditor) context.getBean("textEditor");
+      te.spellCheck();
+   }
+}
+```
+
+Beans.xml
+![image-20240327134302658](./images/image-20240327134302658.png)
+
+### 构造器参数解析
+
+1. 如果存在不止一个参数时，当把参数传递给构造函数时，可能会存在歧义。
+   比如，对于这个类：
+
+```java
+package x.y;
+public class Foo {
+   public Foo(Bar bar, Baz baz) {
+      // ...
+   }
+}
+```
+
+这样的配置文件可以工作顺利：
+![image-20240327134535718](./images/image-20240327134535718.png)
+
+2. 有时需要传递给构造器不同类型的位置时。比如对于这个类：
+
+```java
+package x.y;
+public class Foo {
+   public Foo(int year, String name) {
+      // ...
+   }
+}
+```
+
+使用 type 属性显式的指定了构造函数参数的类型，容器也可以使用与**简单类型**匹配的类型。如：
+![image-20240327134756987](./images/image-20240327134756987.png)
+
+3. 使用 index 属性可以显式的指定构造函数参数的索引，如：
+   ![image-20240327134942392](./images/image-20240327134942392.png)
+
+使用 **ref **属性可以向 bean 传递一个引用
+使用 **type、value** 可以向 bean 可以进行直接值传递
+
+## Spring 基于设值函数的依赖注入
+
+当容器调用一个无参的构造函数或一个无参的静态 factory 方法来初始化 bean 后，通过容器在 bean 上调用设值函数，基于设值函数的 DI 就完成了。
+
+**示例**：
+
+TextEditor.java
+
+```java
+package com.tutorialspoint;
+public class TextEditor {
+   private SpellChecker spellChecker;
+   // a setter method to inject the dependency.
+   public void setSpellChecker(SpellChecker spellChecker) {
+      System.out.println("Inside setSpellChecker." );
+      this.spellChecker = spellChecker;
+   }
+   // a getter method to return spellChecker
+   public SpellChecker getSpellChecker() {
+      return spellChecker;
+   }
+   public void spellCheck() {
+      spellChecker.checkSpelling();
+   }
+}
+```
