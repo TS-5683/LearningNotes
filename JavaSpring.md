@@ -952,3 +952,104 @@ XML 配置文件中 beans 的 *auto-wire* 属性设置为 *byName*，尝试将�
 
 ### byType 自动装配
 
+ **type** 恰好与配置文件中 beans 名称中的一个相匹配，它将尝试匹配和连接它的属性。如果找到匹配项，它将注入这些 beans，否则，它将抛出异常。
+
+TextEditor.java
+
+```java
+package x.y;
+public class TextEditor {
+    private String name;
+    private SpellChecker spellChecker;
+   	// ……
+}
+```
+
+SpellChecker.java
+
+```java
+package x.y;
+public class TextEditor {
+   	// ……
+}
+```
+
+Beans.xml
+
+```xml
+<bean id="textEditor" class="x.y.TextEditor" auto-wire="byType">
+	<property name="name" value="666"/>
+</bean>
+<bean id="spellChecker" class="x.y.SpellChecker" />
+```
+
+![image-20240328211506392](./images/image-20240328211506392.png)
+
+### Spring 由构造器自动装配
+
+与 *byType* 非常相似，但这里的**类型匹配**应用于**构造器参数**。在 XML 配置文件中 bean 的 *autowire* 属性设置为 *constructor* 。然后，它尝试把它的构造函数的参数与配置文件中 beans 名称中的一个进行匹配和连线。如果找到匹配项，它会注入这些 bean，否则，它会抛出异常。
+
+TextEditor.java
+
+```java
+package x.y;
+public class TextEditor {
+    private SpellChecker spellChecker;
+	private String name;
+	public TextEditor( SpellChecker spellChecker, String name ) {
+        this.spellChecker = spellChecker;
+        this.name = name;
+    }
+    // ……
+}
+```
+
+SpellChecker.java
+
+```java
+package x.y;
+public class SpellChecker {
+    // ……
+}
+```
+
+未使用自动装配时的配置文件：
+
+```xml
+<bean id="textEditor" class="x.y.TextEditor">
+	<constructor-arg  ref="spellChecker" />
+	<constructor-arg  value="Generic Text Editor"/>
+</bean>
+<bean id="spellChecker" class="x.y.SpellChecker"></bean>
+```
+
+使用根据构造器的自动装配的配置文件：
+
+```xml
+<bean id="textEditor" class="com.x.y.TextEditor" autowire="constructor">
+    <constructor-arg value="Generic Text Editor"/>
+</bean>
+<bean id="spellChecker" class="x.y.SpellChecker"></bean>
+```
+
+![image-20240328212357562](./images/image-20240328212357562.png)
+
+
+
+## 基于注解的配置
+
+从 Spring 2.5 开始就可以使用**注解** 来配置依赖注入。而不是采用 XML 来描述一个 bean 连线，你可以使用相关类，方法或字段声明的注解，将 bean 配置移动到组件类本身。
+
+注解连线在默认情况下在 Spring 容器中不打开。因此，在可以使用基于注解的连线之前，需要在 Spring 配置文件中启用。
+![image-20240328212701000](./images/image-20240328212701000.png)
+
+| 注解                 | 描述                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| `@Require`           | 应用于 bean 属性的 setter 方法                               |
+| `@autowired`         | 可应用于：setter方法、非setter方法、构造器、属性             |
+| `@qualifier`         | 通过指定确切的将被连线的 bean，@Autowired 和 @Qualifier 注解可以用来删除混乱。 |
+| `JSR-250 Annotation` | pring 支持 JSR-250 的基础的注解，其中包括了 @Resource，@PostConstruct 和 @PreDestroy 注解。 |
+
+### Spring @Required 注释
+
+应用于 bean 属性的 setter 方法，它表明受影响的 bean 属性在配置时必须放在 XML 配置文件中，否则容器就会抛出一个BeanInitializationException 异常。
