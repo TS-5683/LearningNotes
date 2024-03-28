@@ -632,6 +632,8 @@ public class Foo {
 使用 **ref **属性可以向 bean 传递一个引用
 使用 **type、value** 可以向 bean 可以进行直接值传递
 
+这个方法相当于是在配置文件中向类的构造器传入参数。
+
 ## Spring 基于设值函数的依赖注入
 
 当容器调用一个无参的构造函数或一个无参的静态 factory 方法来初始化 bean 后，通过容器在 bean 上调用设值函数，基于设值函数的 DI 就完成了。
@@ -658,3 +660,295 @@ public class TextEditor {
    }
 }
 ```
+
+SpellChecker.java
+
+```java
+package com.tutorialspoint;
+public class SpellChecker {
+   public SpellChecker(){
+      System.out.println("Inside SpellChecker constructor." );
+   }
+   public void checkSpelling() {
+      System.out.println("Inside checkSpelling." );
+   }  
+}
+```
+
+MainApp.java
+
+```java
+package com.tutorialspoint;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+public class MainApp {
+   public static void main(String[] args) {
+      ApplicationContext context = 
+             new ClassPathXmlApplicationContext("Beans.xml");
+      TextEditor te = (TextEditor) context.getBean("textEditor");
+      te.spellCheck();
+   }
+}
+```
+
+Beans.xml
+![image-20240327212437169](./images/image-20240327212437169.png)
+
+这个方式相当于是在配置文件中直接给类的属性赋值。
+
+### 使用 p-namespace 实现 xml 配置
+
+![image-20240327213038797](./images/image-20240327213038797.png)
+经过简化后↓
+![image-20240327213109052](./images/image-20240327213109052.png)
+
+如果这个属性不是一个直接的值而是另一个bean的引用则需要使用 **-ref**
+
+## 注入内部 Beans
+
+Java 内部类是在其他类的范围内被定义的，同理，**inner beans** 是在其他 bean 的范围内定义的 bean。因此 元素内 元素被称为内部bean
+
+```xml
+<bean id="outerBean" class="...">
+	<property name="target">
+		<bean id="innerBean" class="..."/>
+	</property>
+</bean>
+```
+
+TextEditor.java
+
+```java
+package com.tutorialspoint;
+public class TextEditor {
+   private SpellChecker spellChecker;
+   // a setter method to inject the dependency.
+   public void setSpellChecker(SpellChecker spellChecker) {
+      System.out.println("Inside setSpellChecker." );
+      this.spellChecker = spellChecker;
+   }  
+   // a getter method to return spellChecker
+   public SpellChecker getSpellChecker() {
+      return spellChecker;
+   }
+   public void spellCheck() {
+      spellChecker.checkSpelling();
+   }
+}
+```
+
+```xml
+<bean id="textEditor" class="com.tutorialspoint.TextEditor">
+	<property name="spellChecker">
+		<bean id="spellChecker" class="com.tutorialspoint.SpellChecker"/>
+	</property>
+</bean>
+```
+
+由此可见，其实在java层面，并不是内部类的定义方式。
+
+## 注入集合
+
+如果你想传递多个值，如 Java Collection 类型 List、Set、Map 和 Properties 就需要用到注入集合。
+
+| 元素      | 描述                                                        |
+| :-------- | :---------------------------------------------------------- |
+| `<list>`  | 它有助于连线，如注入一列值，允许重复。                      |
+| `<set>`   | 它有助于连线一组值，但不能重复。                            |
+| `<map>`   | 它可以用来注入名称-值对的集合，其中名称和值可以是任何类型。 |
+| `<props>` | 它可以用来注入名称-值对的集合，其中名称和值都是字符串类型。 |
+
+Beans.xml
+
+```java
+<!-- results in a setAddressList(java.util.List) call -->
+      <property name="addressList">
+         <list>
+            <value>INDIA</value>
+            <value>Pakistan</value>
+            <value>USA</value>
+            <value>USA</value>
+         </list>
+      </property>
+ 
+      <!-- results in a setAddressSet(java.util.Set) call -->
+      <property name="addressSet">
+         <set>
+            <value>INDIA</value>
+            <value>Pakistan</value>
+            <value>USA</value>
+            <value>USA</value>
+        </set>
+      </property>
+ 
+      <!-- results in a setAddressMap(java.util.Map) call -->
+      <property name="addressMap">
+         <map>
+            <entry key="1" value="INDIA"/>
+            <entry key="2" value="Pakistan"/>
+            <entry key="3" value="USA"/>
+            <entry key="4" value="USA"/>
+         </map>
+      </property>
+ 
+      <!-- results in a setAddressProp(java.util.Properties) call -->
+      <property name="addressProp">
+         <props>
+            <prop key="one">INDIA</prop>
+            <prop key="two">Pakistan</prop>
+            <prop key="three">USA</prop>
+            <prop key="four">USA</prop>
+         </props>
+      </property>
+ 
+   </bean>
+ 
+</beans>
+```
+
+![image-20240327214449850](./images/image-20240327214449850.png)
+
+MainApp.java
+
+```java
+public class MainApp {
+   public static void main(String[] args) {
+      ApplicationContext context = 
+             new ClassPathXmlApplicationContext("Beans.xml");
+      JavaCollection jc=(JavaCollection)context.getBean("javaCollection");
+      jc.getAddressList();
+      jc.getAddressSet();
+      jc.getAddressMap();
+      jc.getAddressProp();
+   }
+}
+```
+
+JavaCollection.java
+
+```java
+public class JavaCollection {
+	List addressList;
+	Set  addressSet;
+	Map  addressMap;
+	Properties addressProp;
+    public List getAddressList() {
+        System.out.print("List Elements :"  + addressList);
+        return addressList;
+    }
+    public Set getAddressSet() {
+        System.out.println("Set Elements :"  + addressSet);
+        return addressSet;
+    }
+    public Map getAddressMap() {
+        System.out.println("Map Elements :"  + addressMap);
+        return addressMap;
+	}
+    public Properties getAddressProp() {
+        System.out.println("Property Elements :"  + addressProp);
+        return addressProp;
+    }
+}
+```
+
+运行结果：
+
+```
+List Elements :[INDIA, Pakistan, USA, USA]
+Set Elements :[INDIA, Pakistan, USA]
+Map Elements :{1=INDIA, 2=Pakistan, 3=USA, 4=USA}
+Property Elements :{two=Pakistan, one=INDIA, three=USA, four=USA}
+```
+
+### 注入bean引用
+
+![image-20240328174642006](./images/image-20240328174642006.png)
+
+### 注入 null 和空字符串的值
+
+- `<property name="email" value=""/>`：传递一个空字符串作为值
+- `<property name="email"><null/></property>`：传递一个NULL值
+
+## Beans 自动装配
+
+允许开发者在不显式编程的情况下自动注入Bean的依赖关系。在 bean 中相关属性为 `auto-wire`
+
+### 自动装配模式
+
+| 模式          | 描述                                                         |
+| ------------- | ------------------------------------------------------------ |
+| `no`          | 默认的设置，意味着没有自动装配，应该使用显式的 bean 引用来连线 |
+| `byName`      | 根据属性名自动装配。Spring容器尝试将其属性与在配置文件中被定义为相同名称的 beans 的属性进行连接。 |
+| `byType`      | 根据属性数据类型自动装配。如果属性的类型匹配配置文件中的一个确切的 bean，将会尝试匹配和连接属性的类型。如果不止存在一个这样的 bean，则会抛出异常。 |
+| `constructor` | 类似与 `byType` 适用于构造器参数类型。Spring容器会尝试使用与Bean的构造函数参数类型相匹配的已定义Bean来自动装配依赖项。如果配置文件中没有一个构造器参数类型的bean则会抛出错误。 |
+| `autodetect`  | 首先尝试根据 `constructor` 使用自动装配，如果不执行的话就使用 `byType` 自动装配 |
+
+当依赖是集合数据类型时，可以使用 **`byType`** 或者 **`constructor`** 自动装配模式来连接。
+
+### 自动装配的局限性
+
+自动装配始终在同一个项目中使用时，它的效果最好。如果通常不使用自动装配，它可能会使开发人员混淆的使用它来连接只有一个或两个 bean 定义。
+
+1. **不确定性**
+
+自动装配可能会引入不确定性，特别是当有多个Bean匹配同一类型时。如果没有明确指定需要装配的Bean，Spring容器可能会选择一个意想不到的Bean，这可能导致应用程序行为不符合预期。
+
+2. **难以追踪和调试**
+
+由于自动装配是在运行时由容器自动完成的，有时候很难追踪和理解哪些Bean被创建以及它们是如何相互关联的。这可能会使得调试和维护变得更加困难。
+
+3. **过度依赖**
+
+自动装配可能导致过度依赖Spring容器，使得组件之间的耦合度增加。这可能会减少组件的可重用性和可测试性，因为它们可能不再能够在没有Spring容器的情况下独立运行。
+
+4. **性能问题**
+
+在某些情况下，自动装配可能会导致性能问题。例如，如果配置了大量自动装配的Bean，容器启动时可能会进行大量的查找和匹配操作，这可能会影响应用程序的启动时间。
+
+5. **配置覆盖**
+
+在`application.properties`或`application.yml`中配置的属性可能会覆盖自动装配的Bean，这可能会导致自动装配的行为不如预期。
+
+6. **限制了硬编码**
+
+虽然自动装配减少了硬编码的需要，但它也限制了对原始类型（如`int`、`long`、`boolean`等）和`String`、`Classes`等进行自动装配的能力。这是因为这些类型的值通常需要特定的处理，而自动装配机制可能无法处理这些情况。
+
+7. **容器中的多个Bean定义**
+
+如果容器中有多个Bean定义，可能需要对`setter`和构造器参数进行类型匹配才能完成依赖注入。对于`array`、`collection`和`map`类型的依赖，这不是问题，但对于单一值的依赖，可能会导致不明确的情况，如果没有唯一的Bean定义，可能会抛出异常。
+
+| 限制         | 描述                                                         |
+| ------------ | ------------------------------------------------------------ |
+| 重写的可能性 | 可以使用总是重写自动装配的 `<constructor-arg&gt>` 和 `<property>` 设置来指定依赖关系。 |
+| 原始数据类型 | 不能自动装配简单类型，比如字符串和类等                       |
+| 混乱的本质   | 自动装配不如显式装配精确，所以尽量使用显式装配               |
+
+### byName 自动装配
+
+XML 配置文件中 beans 的 *auto-wire* 属性设置为 *byName*，尝试将它的属性与配置文件中定义为相同名称的 beans 进行匹配和连接。找不到时会报错。
+
+未使用自动装配时：
+
+```xml
+<bean id="testEditor" class="x.y.TextEditor">
+    <property name="spellChecher" ref="spellchecker" />
+    <property name="name" value="Feneric Text Editor" />
+</bean>
+
+<bean id="spellChecker" class="x.y.SpellChecker"></bean>
+```
+
+使用自动装配 byName ：
+
+```xml
+<bean id="testEditor" class="x.y.TextEditor" autowire="byName">
+    <property name="name" value="Feneric Text Editor" />
+</bean>
+
+<bean id="spellChecker" class="x.y.SpellChecker"></bean>
+```
+
+![image-20240328182243002](./images/image-20240328182243002.png)
+
+### byType 自动装配
+
