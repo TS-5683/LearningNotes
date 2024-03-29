@@ -1,9 +1,10 @@
 # utf-8
 # 删除图片文件夹中的无效图片
-
+# 无效：在某个.md文件中通过文件名被引用即为有效
 
 import os
 import re
+import sys
 
 def read_all_text_files(directory):
     lineSet = set()
@@ -15,13 +16,17 @@ def read_all_text_files(directory):
                         lineSet.add(line.strip())
     return lineSet
 
-
 current_directory = os.getcwd()
 print("开始扫描\n---------------------")
 n = 0
 
 # 读取所有文本文件到lineSet
-lineSet = read_all_text_files(current_directory)
+lineSet = set()
+try:
+    lineSet = read_all_text_files(current_directory)
+except Exception as e:
+    print(e)
+    sys.exit(-1)
 
 # 图片循环
 imgList = os.listdir('images')
@@ -33,6 +38,5 @@ for imgName in imgList:
             print(f'删除图片：{imgName} 成功')
         except Exception as e:
             print(f"删除图片：{imgName} 失败\n{e}")
-
 print("\n---------------------")
 print(f"扫描结束，删除图片数量：{n}")
