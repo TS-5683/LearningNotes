@@ -1762,13 +1762,13 @@ Spring 框架的一个关键组件是**面向方面的编程** (AOP)框架。面
 
 **通知的类型**
 
-| 通知类型       | 描述                                   |
-| -------------- | -------------------------------------- |
-| 前置通知       | 一个方法执行之前执行通知               |
-| 后置通知       | 一个方法执行之后不考虑其结果执行通知   |
-| 返回后通知     | 一个方法执行成功完成时执行通知         |
-| 抛出异常后通知 | 在一个方法执行之后抛出异常时才执行通知 |
-| 环绕通知       | 在建议方法调用之前之后都执行通知       |
+| 通知类型                         | 描述                                   |
+| -------------------------------- | -------------------------------------- |
+| 前置通知aop:before               | 一个方法执行之前执行通知               |
+| 后置通知aop:after                | 一个方法执行之后不考虑其结果执行通知   |
+| 返回后通知aop:after-returning    | 一个方法执行成功完成时执行通知         |
+| 抛出异常后通知aop:after-throwing | 在一个方法执行之后抛出异常时才执行通知 |
+| 环绕通知aop:around               | 在建议方法调用之前之后都执行通知       |
 
 ## 自定义切面
 
@@ -1780,4 +1780,494 @@ Spring 支持 **@AspectJ annotation style** 的方法和**基于模式** 的方�
 | @AspectJ based   | @AspectJ 引用一种声明方面的风格作为带有 Java 5 注释的常规 Java 类注释。 |
 
 ## 基于 AOP 的 xml 框架
+
+使用前需要导入spring-aop架构：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+    http://www.springframework.org/schema/aop 
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd ">
+
+   <!-- bean definition & AOP specific configuration -->
+
+</beans>
+```
+
+还需要在应用程序的 CLASSPATH 中使用以下 AspectJ 库文件。这些库文件在一个 AspectJ 装置的 ‘lib’ 目录中是可用的，否则你可以在 Internet 中下载它们。
+
+- aspectjrt.jar
+- aspectjweaver.jar
+- aspectj.jar
+- aopalliance.jar
+
+### 声明 aspect
+
+aspect 使用元素声明，支持 bean 使用 ref 属性引用：
+
+```xml
+<aop:config>
+   <aop:aspect id="myAspect" ref="aBean">
+   ...
+   </aop:aspect>
+</aop:config>
+<bean id="aBean" class="...">
+...
+</bean>
+```
+
+### 声明切入点 pointcut
+
+切入点有助于确定使用不同建议执行的感兴趣的连接点（即方法）。在处理基于配置的 xml 架构时，切入点将会按照如此定义：
+
+```xml
+<aop:config>
+   	<aop:aspect id="myAspect" ref="aBean">
+   	<aop:pointcut id="businessService"
+      	expression="execution(* com.xyz.myapp.service.*.*(..))"/>
+   	...
+   	</aop:aspect>
+</aop:config>
+<bean id="aBean" class="...">
+...
+</bean>
+```
+
+如下定义一个名为“businessService”的切入点，该切入点将与com.tutorialspoint 包下的 Student 类中的 getName() 方法相匹配：
+
+```xml
+<aop:config>
+   <aop:aspect id="myAspect" ref="aBean">
+   <aop:pointcut id="businessService"
+      expression="execution(* com.tutorialspoint.Student.getName(..))"/>
+   ...
+   </aop:aspect>
+</aop:config>
+<bean id="aBean" class="...">
+...
+</bean>
+```
+
+### 声明建议、通知
+
+可以使用 <aop:{ADVICE NAME}> 元素在一个 中声明五个建议中的任何一个，如下所示
+
+```
+<aop:config>
+   	<aop:aspect id="myAspect" ref="aBean">
+      	<aop:pointcut id="businessService"
+         	expression="execution(* com.xyz.myapp.service.*.*(..))"/>
+      	<!-- a before advice definition -->
+      	<aop:before pointcut-ref="businessService" method="doRequiredTask"/>
+      	<!-- an after advice definition -->
+      	<aop:after pointcut-ref="businessService" method="doRequiredTask"/>
+      	<!-- an after-returning advice definition -->
+      	<!--The doRequiredTask method must have parameter named retVal -->
+      	<aop:after-returning pointcut-ref="businessService" returning="retVal" method="doRequiredTask"/>
+      <!-- an after-throwing advice definition -->
+      <!--The doRequiredTask method must have parameter named ex -->
+      	<aop:after-throwing pointcut-ref="businessService"
+         	throwing="ex"
+         	method="doRequiredTask"/>
+      <!-- an around advice definition -->
+      	<aop:around pointcut-ref="businessService" 
+         	method="doRequiredTask"/>
+   	...
+   	</aop:aspect>
+</aop:config>
+<bean id="aBean" class="...">
+...
+</bean>
+```
+
+语法：`<aop:通知类型 pointcut-ref="切入点id" method="方法名">`
+
+可以对不同的建议使用相同的 **doRequiredTask** 或者不同的方法。这些方法将会作为 aspect 模块的一部分来定义。
+
+**示例**
+
+Logging.java
+
+```java
+package com.tutorialspoint;
+public class Logging {
+   	/* 
+   	 * This is the method which I would like to execute
+     * before a selected method execution.
+    */
+   	public void beforeAdvice(){
+      	System.out.println("Going to setup student profile.");
+   	}
+   	/** 
+     * This is the method which I would like to execute
+     * after a selected method execution.
+    */
+   	public void afterAdvice(){
+      	System.out.println("Student profile has been setup.");
+   	}
+   	/** 
+    * This is the method which I would like to execute
+    * when any method returns.
+    */
+    public void afterReturningAdvice(Object retVal){
+       System.out.println("Returning:" + retVal.toString() );
+    }
+   	/**
+    * This is the method which I would like to execute
+    * if there is an exception raised.
+    */
+   	public void AfterThrowingAdvice(IllegalArgumentException ex){
+      	System.out.println("There has been an exception: " + ex.toString());   
+   	}  
+}
+```
+
+Student.java
+
+```java
+package com.tutorialspoint;
+public class Student {
+   	private Integer age;
+   	private String name;
+   	public void setAge(Integer age) {
+      	this.age = age;
+   	}
+   	public Integer getAge() {
+      	System.out.println("Age : " + age );
+      	return age;
+   	}
+   	public void setName(String name) {
+      	this.name = name;
+   	}
+   	public String getName() {
+      	System.out.println("Name : " + name );
+      	return name;
+   	}  
+   	public void printThrowException(){
+       	System.out.println("Exception raised");
+       	throw new IllegalArgumentException();
+   	}
+}
+```
+
+MainApp.java
+
+```java
+ackage com.tutorialspoint;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+public class MainApp {
+   	public static void main(String[] args) {
+      	ApplicationContext context = 
+             	new ClassPathXmlApplicationContext("Beans.xml");
+      	Student student = (Student) context.getBean("student");
+      	student.getName();
+      	student.getAge();      
+      	student.printThrowException();
+   	}
+}
+```
+
+Beans.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+    http://www.springframework.org/schema/aop 
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd ">
+
+   <aop:config>
+      <aop:aspect id="log" ref="logging">
+         <aop:pointcut id="selectAll" 
+         expression="execution(* com.tutorialspoint.*.*(..))"/>
+         <aop:before pointcut-ref="selectAll" method="beforeAdvice"/>
+         <aop:after pointcut-ref="selectAll" method="afterAdvice"/>
+         <aop:after-returning pointcut-ref="selectAll" 
+                              returning="retVal"
+                              method="afterReturningAdvice"/>
+         <aop:after-throwing pointcut-ref="selectAll" 
+                             throwing="ex"
+                             method="AfterThrowingAdvice"/>
+      </aop:aspect>
+   </aop:config>
+
+   <!-- Definition for student bean -->
+   <bean id="student" class="com.tutorialspoint.Student">
+      <property name="name"  value="Zara" />
+      <property name="age"  value="11"/>      
+   </bean>
+
+   <!-- Definition for logging aspect -->
+   <bean id="logging" class="com.tutorialspoint.Logging"/> 
+      
+</beans>
+```
+
+运行结果：
+
+```
+Going to setup student profile.
+Name : Zara
+Student profile has been setup.
+Age : 11
+Exception raised
+.....
+other exception content
+```
+
+基于AOP的@AspecttJ
+
+@AspectJ 指的是声明 aspects 的一种风格。通过在你的基于架构的 XML 配置文件中包含以下元素，@AspectJ 支持是可用的：`<aop:aspectj-autoproxy/>`
+
+还需要在应用程序的 CLASSPATH 中使用以下 AspectJ 库文件。这些库文件在一个 AspectJ 装置的 ‘lib’ 目录中是可用的，可以在 Internet 中下载它们。
+
+- aspectjrt.jar
+- aspectjweaver.jar
+- aspectj.jar
+- aopalliance.jar
+
+### 声明一个 aspect
+
+和其他任何正常的 bean 一样，除了它们将会用 @AspectJ 注释之外，它和其他类一样可能有方法和字段：
+
+```java
+package org.xyz;
+import org.aspectj.lang.annotation.Aspect;
+@Aspect
+public class AspectModule {
+}
+```
+
+然后在xml配置文件中与其他bean一样正常配置即可
+
+```xml
+<bean id="myAspect" class="org.xyz.AspectModule">
+   <!-- configure properties of aspect here as normal -->
+</bean>
+```
+
+### 声明一个 piint-cut
+
+**切入点** 有助于确定使用不同建议执行的感兴趣的连接点（即方法）。在处理基于配置的 XML 架构时，切入点的声明有两个部分：
+
+- 一个切入点表达式决定了我们感兴趣的哪个方法会真正被执行。
+- 一个切入点标签包含一个名称和任意数量的参数。方法的真正内容是不相干的，并且实际上它应该是空的。
+
+如：一个名为 ‘businessService’ 的切入点，该切入点将与 com.tutorialspoint 包下的类中可用的每一个方法相匹配：
+
+```java
+import org.aspectj.lang.annotation.Pointcut;
+@Pointcut("execution(* com.xyz.myapp.service.*.*(..))") // expression 
+private void businessService() {}  // signature
+```
+
+一个名为 ‘getname’ 的切入点，该切入点将与 com.tutorialspoint 包下的 Student 类中的 getName() 方法相匹配：
+
+```java
+import org.aspectj.lang.annotation.Pointcut;
+@Pointcut("execution(* com.tutorialspoint.Student.getName(..))") 
+private void getname() {}
+```
+
+### 声明 advice
+
+使用 @{ADVICE-NAME} 注释声明五个建议中的任意一个，如下所示。这假设你已经定义了一个切入点标签方法 businessService()：
+
+```java
+@Before("businessService()")
+public void doBeforeTask(){
+ ...
+}
+@After("businessService()")
+public void doAfterTask(){
+ ...
+}
+@AfterReturning(pointcut = "businessService()", returning="retVal")
+public void doAfterReturnningTask(Object retVal){
+  // you can intercept retVal here.
+  ...
+}
+@AfterThrowing(pointcut = "businessService()", throwing="ex")
+public void doAfterThrowingTask(Exception ex){
+  // you can intercept thrown exception here.
+  ...
+}
+@Around("businessService()")
+public void doAroundTask(){
+ ...
+}
+```
+
+###  
+
+# JDBC 框架
+
+使用普通的 JDBC 数据库时，会需要写一些不必要的代码来处理异常、打开和关闭数据库连接等。
+
+ Spring JDBC 框架负责所有的低层细节，从开始打开连接，准备和执行 SQL 语句，处理异常，处理事务，到最后关闭连接。
+
+所以当从数据库中获取数据时，所做的是定义连接参数，指定要执行的 SQL 语句，每次迭代完成所需的工作。
+
+Spring JDBC 提供了几种方法和数据库中相应的不同的类与接口。
+
+## JdbcTemplate 类
+
+执行 SQL 查询、更新语句和存储过程调用，执行迭代结果集和提取返回参数值。
+
+也捕获 JDBC 异常并转换它们到 org.springframework.dao 包中定义的通用类、更多的信息、异常层次结构。
+
+*JdbcTemplate* 类的实例是*线程安全* 配置的。所以可以配置 JdbcTemplate 的单个实例，然后将这个共享的引用安全地注入到多个 DAOs 中。
+
+常见的做法是在 Spring 配置文件中配置数据源，然后共享数据源 bean 依赖注入到 DAO 类中，并在数据源的设值函数中创建了 JdbcTemplate。
+
+## 配置数据源
+
+在数据库 **TEST** 中创建一个数据库表 **Student** 。
+
+```SQL
+CREATE TABLE Student(
+   	ID   INT NOT NULL AUTO_INCREMENT,
+   	NAME VARCHAR(20) NOT NULL,
+   	AGE  INT NOT NULL,
+   	PRIMARY KEY (ID)
+);
+```
+
+现在，需要提供一个数据源到 JdbcTemplate 中，所以它可以配置本身来获得数据库访问。可以在 XML 文件中配置数据源，如下所示：
+
+```xml
+<bean id="dataSource"
+class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+   	<property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+   	<property name="url" value="jdbc:mysql://localhost:3306/TEST"/>
+   	<property name="username" value="root"/>
+   	<property name="password" value="password"/>
+</bean>
+```
+
+## 数据访问对象 DAO
+
+DAOs 提供一种方法来读取数据并将数据写入到数据库中，它们应该通过一个接口显示此功能，应用程序的其余部分将访问它们。
+
+### 执行 SQL 语句
+
+```java
+// 查询整数类型
+String SQL = "select count(*) from Student";
+int rowCount = jdbcTemplateObject.queryForInt( SQL );
+
+// 查询long类型
+SQL = "select count(*) from Student";
+long rowCount = jdbcTemplateObject.queryForLong( SQL);
+
+// 一个使用绑定变量的简单查询：
+SQL = "select age from Student where id = ?";
+int age = jdbcTemplateObject.queryForInt(SQL, new Object[]{10});
+// 这里使用了?作为占位符，以便在执行查询时动态地插入参数值。
+// new Object[]{10}是一个对象数组，包含了一个元素，即你要绑定到SQL查询中?占位符的值。在这个例子中，数组中的10将替换SQL语句中的?，所以实际执行的SQL语句是select age from Student where id = 10。
+```
+
+```java
+String SQL = "select name from Student where id = ?";
+String name = jdbcTemplateObject.queryForObject(SQL, new Object[]{10}, String.class);
+```
+
+- 第一个参数`SQL`是你要执行的SQL查询语句。
+- 第二个参数`new Object[]{10}`是一个对象数组，包含了一个元素，即你要绑定到SQL查询中`?`占位符的值。在这个例子中，数组中的`10`将替换SQL语句中的`?`，所以实际执行的SQL语句是`select name from Student where id = 10`。
+- 第三个参数`String.class`指定了返回对象的类型。在这个例子中，我们期望查询结果是一个字符串，因此指定了`String.class`。
+
+查询并返回一个对象：
+
+```java
+String SQL = "select * from Student where id = ?";
+Student student = jdbcTemplateObject.queryForObject(SQL, 
+                  new Object[]{10}, new StudentMapper());
+public class StudentMapper implements RowMapper<Student> {
+   	public Student mapRow(ResultSet rs, int rowNum) throws SQLException {
+      	Student student = new Student();
+      	student.setID(rs.getInt("id"));
+      	student.setName(rs.getString("name"));
+      	student.setAge(rs.getInt("age"));
+      	return student;
+   }
+}
+```
+
+查询并返回多个对象：
+
+```java
+String SQL = "select * from Student";
+List<Student> students = jdbcTemplateObject.query(SQL,
+                         new StudentMapper());
+public class StudentMapper implements RowMapper<Student> {
+   	public Student mapRow(ResultSet rs, int rowNum) throws SQLException {
+      	Student student = new Student();
+      	student.setID(rs.getInt("id"));
+      	student.setName(rs.getString("name"));
+      	student.setAge(rs.getInt("age"));
+      	return student;
+   	}
+}
+```
+
+在表中插入一行：
+
+```java
+String SQL = "insert into Student (name, age) values (?, ?)";
+jdbcTemplateObject.update( SQL, new Object[]{"Zara", 11} );
+```
+
+更新表中的一行：
+
+```java
+String SQL = "update Student set name = ? where id = ?";
+jdbcTemplateObject.update( SQL, new Object[]{"Zara", 10} );
+```
+
+从表中删除一行：
+
+```java
+String SQL = "delete Student where id = ?";
+jdbcTemplateObject.update( SQL, new Object[]{20} );
+```
+
+### 执行 DDL 语句
+
+可以使用 *jdbcTemplate* 中的 **execute(..)** 方法来执行任何 SQL 语句或 DDL 语句，如：
+
+```java
+String SQL = "CREATE TABLE Student( " +
+   "ID   INT NOT NULL AUTO_INCREMENT, " +
+   "NAME VARCHAR(20) NOT NULL, " +
+   "AGE  INT NOT NULL, " +
+   "PRIMARY KEY (ID));"
+jdbcTemplateObject.execute( SQL );
+```
+
+### Spring 中 SQL 的存储过程
+
+**SimpleJdbcCall** 类可以用于调用包含 IN 和 OUT 参数的存储过程。
+
+
+
+# 事务管理
+
+数据库事务是一个被视为单一的工作单元的操作序列。这些操作应该要么完整地执行，要么完全不执行。事务管理是一个重要组成部分，RDBMS 面向企业应用程序，以确保数据完整性和一致性。事务的概念可以描述为具有以下四个关键属性说成是 **ACID**（同数据库）：
+
+- **原子性：** 事务应该当作一个单独单元的操作，这意味着整个序列操作要么是成功，要么是失败的。
+- **一致性：** 这表示数据库的引用完整性的一致性，表中唯一的主键等。
+- **隔离性：** 可能同时处理很多有相同的数据集的事务，每个事务应该与其他事务隔离，以防止数据损坏。
+- **持久性：** 一个事务一旦完成全部操作后，这个事务的结果必须是永久性的，不能因系统故障而从数据库中删除。
+
+Spring 框架在不同的底层事务管理 APIs 的顶部提供了一个抽象层。Spring 的事务支持旨在通过添加事务能力到 POJOs 来提供给 EJB 事务一个选择方案。Spring 支持编程式和声明式事务管理。EJBs 需要一个应用程序服务器，但 Spring 事务管理可以在不需要应用程序服务器的情况下实现。
+
+## 局部事务、全局事务
 
