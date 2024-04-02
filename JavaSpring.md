@@ -2225,6 +2225,23 @@ String SQL = "insert into Student (name, age) values (?, ?)";
 jdbcTemplateObject.update( SQL, new Object[]{"Zara", 11} );
 ```
 
+批量新增数据：（其他操作的批量版本和这个差不多的）
+
+```java
+Object[] obj1 = {null, "小红", 20};
+Object[] obj2 = {null, "晓俊", 19};
+Object[] obj3 = {null, "骁奇", 27};
+List<Object[]> list = nbew ArrayList<>;
+list.add(obj1);
+list.add(obj2);
+list.add(obj3);
+
+String sql = "insert into Student(id, name, age) values(?,?,?);";
+
+int[] count = jdbcTemplateObject.batchUpdate(sql, list);
+System.out.println(Arrays.toString(count));
+```
+
 更新表中的一行：
 
 ```java
@@ -2238,6 +2255,10 @@ jdbcTemplateObject.update( SQL, new Object[]{"Zara", 10} );
 String SQL = "delete Student where id = ?";
 jdbcTemplateObject.update( SQL, new Object[]{20} );
 ```
+
+**jdbcTemplate使用时增删改均为update、查询使用query**
+
+
 
 ### 执行 DDL 语句
 
@@ -2270,4 +2291,441 @@ jdbcTemplateObject.execute( SQL );
 Spring 框架在不同的底层事务管理 APIs 的顶部提供了一个抽象层。Spring 的事务支持旨在通过添加事务能力到 POJOs 来提供给 EJB 事务一个选择方案。Spring 支持编程式和声明式事务管理。EJBs 需要一个应用程序服务器，但 Spring 事务管理可以在不需要应用程序服务器的情况下实现。
 
 ## 局部事务、全局事务
+
+局部事务是特定于一个单一的事务资源，如一个 JDBC 连接，而全局事务可以跨多个事务资源事务，如在一个分布式系统中的事务。
+
+- 局部事务管理在一个集中的计算环境中比较有用。计算环境中的应用程序组件和资源位于一个单位点，事务管理只设计一个运行在单一机器中的本地数据管理器。局部事务更容易实现。
+- 全局事务管理需要在分布式计算环境中，所有的资源都分布在多个系统中。在这种情况下事务管理需要同时在局部和全局范围内进行。分布式或全局事务跨多个系统执行，它的执行需要全局事务管理系统和所有相关系统的局部数据管理人员之间的协调。
+
+## 编程式、声明式
+
+Spring 支持两种类型的事务管理:
+
+- 编程式事务管理 ：这意味着你在编程的帮助下有管理事务。这给了你极大的灵活性，但却很难维护。
+- 声明式事务管理 ：这意味着你从业务代码中分离事务管理。你仅仅使用注释或 XML 配置来管理事务。
+
+比较之下声明式事务管理尽管不如编程式事务管理灵活，但仍然更可取，因为它允许通过代码控制事务。
+
+但作为一种横切关注点，声明式事务管理可以使用 AOP 方法进行模块化。Spring 支持使用 Spring AOP 框架的声明式事务管理。
+
+## 事务抽象
+
+*org.springframework.transaction.PlatformTransactionManager* 接口：
+
+```java
+public interface PlatformTransactionManager {
+   TransactionStatus getTransaction(TransactionDefinition definition);
+   throws TransactionException;
+   void commit(TransactionStatus status) throws TransactionException;
+   void rollback(TransactionStatus status) throws TransactionException;
+}
+```
+
+| 方法                                                         | 描述                                               |
+| ------------------------------------------------------------ | -------------------------------------------------- |
+| `TransactionStatus getTransaction(TransactionDefinition definition)` | 根据制定的传播行为，返回当前事务或创建一个新的事务 |
+| `void commit(TransactionStatus status)`                      | 提交事务                                           |
+| `void rollback(TransactionStatus status)`                    | 执行事务的回滚                                     |
+
+*TransactionDefinition* 是在 Spring 中事务支持的核心接口：
+
+```java
+public interface TransactionDefinition {
+   	int getPropagationBehavior();
+   	int getIsolationLevel();
+   	String getName();
+   	int getTimeout();
+   	boolean isReadOnly();
+}
+```
+
+| 方法                           | 描述                                                 |
+| ------------------------------ | ---------------------------------------------------- |
+| `int getPropagationBehavior()` | 返回传播行为                                         |
+| `int getIsolationLevel()`      | 返回事务独立程度                                     |
+| `String getName()`             | 返回事务的名称                                       |
+| `int getTimeout()`             | 返回以秒为单位的时间间隔，事务必须在该事件间隔内完成 |
+| `boolean isReadOnly()`         | 返回事务是否是只读的                                 |
+
+事务隔离级别：
+
+| 隔离                                               | 描述                                     |
+| -------------------------------------------------- | ---------------------------------------- |
+| `TransactionDefinition.ISOLATION_DEFAULT`          | 默认隔离级别                             |
+| `TransactionDefinition.ISOLATION_READ_COMMITTED`   | 能够组织误读，可以发生虚读和不可重复读   |
+| `TransactionDefinition.ISOLATION_READ_UNCOMMITTED` | 可以发生误读、不可重复读和虚读。         |
+| `TransactionDefinition.ISOLATION_REPEATABLE_READ`  | 能够阻止误读和不可重复读；可以发生虚读。 |
+| `TransactionDefinition.ISOLATION_SERIALIZABLE`     | 能够阻止误读、不可重复读和虚读。         |
+
+传播行为：
+
+​	事务执行过程中有可能需要调用到另外一个也有事务的方法时采取什么措施，是继续使用之前的事务还是说需要开启新的事务
+
+| 传播                                                | 描述                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| **TransactionDefinition.PROPAGATION_MANDATORY**     | 支持当前事务；如果不存在当前事务则抛出一个异常。**必须有，自己不会创建事务所有没有的话就回报错** |
+| **TransactionDefinition.PROPAGATION_NESTED**        | 如果存在当前事务则在一个**嵌套**的事务中执行                 |
+| **TransactionDefinition.PROPAGATION_NEVER**         | **不支持**当前事务；如果存在当前事务则抛出一个异常           |
+| **TransactionDefinition.PROPAGATION_NOT_SUPPORTED** | 不支持当前事务，而**总是执行非事务性**                       |
+| **TransactionDefinition.PROPAGATION_REQUIRED**      | **一定要有事务，但不一定创建事务。**支持当前事务，如果不存在事务则创建一个新的事务 |
+| **TransactionDefinition.PROPAGATION_REQUIRES_NEW**  | 创建一个**新事务**，如果存在一个事务则把当前事务**挂起**、   |
+| **TransactionDefinition.PROPAGATION_SUPPORTS**      | 支持当前事务；如果不存在则执行非事务性。**有没有都能执行，不会自己创建事务** |
+| **TransactionDefinition.TIMEOUT_DEFAULT**           | 使用默认超时的底层事务系统，如果不支持超时则没有             |
+
+*TransactionStatus* 接口为事务代码提供了一个简单的方法来控制事务的执行和查询事务状态。
+
+```java
+public interface TransactionStatus extends SavepointManager {
+   boolean isNewTransaction(); // 是否是新事务
+   boolean hasSavepoint(); // 事务内部是否有一个保存点
+   void setRollbackOnly(); // 设置该事务为 rollback-only
+   boolean isRollbackOnly(); // 是否已标记为 rollback-only
+   boolean isCompleted(); // 事务是否完成即是否已经提交或回滚
+}
+```
+
+## Spring 编程式事务管理
+
+即在源代码编程的帮助下管理事务，灵活但是维护起来比较难。
+
+主要针对于多个数据库的管理，在事务的帮助下可以执行多种CRUD操作。
+
+如：现有两张表Student、Marks
+
+```SQL
+CREATE TABLE Student(
+   ID   INT NOT NULL AUTO_INCREMENT,
+   NAME VARCHAR(20) NOT NULL,
+   AGE  INT NOT NULL,
+   PRIMARY KEY (ID)
+);
+
+CREATE TABLE Marks(
+   SID INT NOT NULL,  -- 关联Student 表的外键
+   MARKS  INT NOT NULL,
+   YEAR   INT NOT NULL
+);
+```
+
+| 步骤 | 描述                                                         |
+| :--- | :----------------------------------------------------------- |
+| 1    | 创建一个名为 *SpringExample* 的项目，并在创建的项目中的 **src** 文件夹下创建包 *com.tutorialspoint* 。 |
+| 2    | 使用 *Add External JARs* 选项添加必需的 Spring 库，解释见 *Spring Hello World Example* chapter. |
+| 3    | 在项目中添加 Spring JDBC 指定的最新的库 **mysql-connector-java.jar** ，**org.springframework.jdbc.jar** 和 **org.springframework.transaction.jar** 。如果你还没有这些库，你可以下载它们。 |
+| 4    | 创建 DAO 接口 *StudentDAO* 并列出所有需要的方法。尽管它不是必需的并且你可以直接编写 *StudentJDBCTemplate* 类，但是作为一个好的实践，我们还是做吧。 |
+| 5    | 在 *com.tutorialspoint* 包下创建其他必需的 Java 类 *StudentMarks* ，*StudentMarksMapper* ，*StudentJDBCTemplate* 和 *MainApp* 。如果需要的话，你可以创建其他的 POJO 类。 |
+| 6    | 确保你已经在 TEST 数据库中创建了 **Student** 和 **Marks** 表。还要确保你的 MySQL 服务器运行正常并且你使用给出的用户名和密码可以读/写访问数据库。 |
+| 7    | 在 **src** 文件夹下创建 Beans 配置文件 *Beans.xml* 。        |
+| 8    | 最后一步是创建所有 Java 文件和 Bean 配置文件的内容并按照如下所示的方法运行应用 |
+
+数据访问对象接口 StudentDAO.java:
+
+```java
+package com.tutorialspoint;
+import java.util.List;
+import javax.sql.DataSource;
+public interface StudentDAO {
+   /** 
+    * This is the method to be used to initialize
+    * database resources ie. connection.
+    */
+   	public void setDataSource(DataSource ds);
+   /** 
+    * This is the method to be used to create
+    * a record in the Student and Marks tables.
+    */
+   	public void create(String name, Integer age, Integer marks, Integer year);
+   /** 
+    * This is the method to be used to list down
+    * all the records from the Student and Marks tables.
+    */
+   	public List<StudentMarks> listStudents();
+}
+```
+
+StudentMarks.java: 
+
+```java
+package com.tutorialspoint;
+public class StudentMarks {
+   	private Integer age;
+   	private String name;
+   	private Integer id;
+   	private Integer marks;
+   	private Integer year;
+   	private Integer sid;
+   	public void setAge(Integer age) {
+      	this.age = age;
+   	}
+   	public Integer getAge() {
+      	return age;
+   	}
+   	public void setName(String name) {
+      	this.name = name;
+   	}
+   	public String getName() {
+      	return name;
+   	}
+   	public void setId(Integer id) {
+      	this.id = id;
+   	}
+   	public Integer getId() {
+      	return id;
+   	}
+   	public void setMarks(Integer marks) {
+      	this.marks = marks;
+    }
+   	public Integer getMarks() {
+      	return marks;
+   	}
+   	public void setYear(Integer year) {
+      	this.year = year;
+   	}
+   	public Integer getYear() {
+      	return year;
+   	}
+   	public void setSid(Integer sid) {
+      	this.sid = sid;
+   	}
+   	public Integer getSid() {
+      	return sid;
+   	}
+}
+```
+
+ StudentMarksMapper.java 
+
+```
+package com.tutorialspoint;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import org.springframework.jdbc.core.RowMapper;
+public class StudentMarksMapper implements RowMapper<StudentMarks> {
+   	public StudentMarks mapRow(ResultSet rs, int rowNum) throws SQLException {
+      	StudentMarks studentMarks = new StudentMarks();
+      	studentMarks.setId(rs.getInt("id"));
+      	studentMarks.setName(rs.getString("name"));
+      	studentMarks.setAge(rs.getInt("age"));
+      	studentMarks.setSid(rs.getInt("sid"));
+      	studentMarks.setMarks(rs.getInt("marks"));
+      	studentMarks.setYear(rs.getInt("year"));
+      	return studentMarks;
+   	}
+}
+```
+
+StudentDAO 实现类 StudentJDBCTemplate.java
+
+```java
+package com.tutorialspoint;
+import java.util.List;
+import javax.sql.DataSource;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+public class StudentJDBCTemplate implements StudentDAO {
+   	private DataSource dataSource;
+   	private JdbcTemplate jdbcTemplateObject;
+   	private PlatformTransactionManager transactionManager;
+   	public void setDataSource(DataSource dataSource) {
+      	this.dataSource = dataSource;
+      	this.jdbcTemplateObject = new JdbcTemplate(dataSource);
+   	}
+   	public void setTransactionManager(
+      	PlatformTransactionManager transactionManager) {
+      	this.transactionManager = transactionManager;
+   	}
+   	public void create(String name, Integer age, Integer marks, Integer year){
+      	TransactionDefinition def = new DefaultTransactionDefinition();  // 传播行为-默认
+      	TransactionStatus status = transactionManager.getTransaction(def); // 创建事务并返回
+      	try {
+         	String SQL1 = "insert into Student (name, age) values (?, ?)";
+         	jdbcTemplateObject.update( SQL1, name, age);
+         	String SQL2 = "select max(id) from Student";
+         	int sid = jdbcTemplateObject.queryForInt( SQL2 );
+         	String SQL3 = "insert into Marks(sid, marks, year) " + 
+                       "values (?, ?, ?)";
+         	jdbcTemplateObject.update( SQL3, sid, marks, year);
+         	System.out.println("Created Name = " + name + ", Age = " + age);
+         	transactionManager.commit(status); // 执行成功则提交事务
+         } catch (DataAccessException e) {
+         	System.out.println("Error in creating record, rolling back");
+         	transactionManager.rollback(status); // 出错则回滚事务
+         	throw e;
+      	}
+      	return;
+   	}
+   	public List<StudentMarks> listStudents() {
+      	String SQL = "select * from Student, Marks where Student.id=Marks.sid";
+      	List <StudentMarks> studentMarks = jdbcTemplateObject.query(SQL, new StudentMarksMapper());
+      	return studentMarks;
+    }
+}
+```
+
+MainApp.java
+
+```java
+package com.tutorialspoint;
+import java.util.List;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import com.tutorialspoint.StudentJDBCTemplate;
+public class MainApp {
+   	public static void main(String[] args) {
+      	ApplicationContext context = 
+             	new ClassPathXmlApplicationContext("Beans.xml");
+      	StudentJDBCTemplate studentJDBCTemplate = (StudentJDBCTemplate)context.getBean("studentJDBCTemplate");     
+      	System.out.println("------Records creation--------" );
+      	studentJDBCTemplate.create("Zara", 11, 99, 2010);
+      	studentJDBCTemplate.create("Nuha", 20, 97, 2010);
+      	studentJDBCTemplate.create("Ayan", 25, 100, 2011);
+      	System.out.println("------Listing all the records--------" );
+      	List<StudentMarks> studentMarks = studentJDBCTemplate.listStudents();
+      	for (StudentMarks record : studentMarks) {
+         	System.out.print("ID : " + record.getId() );
+         	System.out.print(", Name : " + record.getName() );
+         	System.out.print(", Marks : " + record.getMarks());
+         	System.out.print(", Year : " + record.getYear());
+         	System.out.println(", Age : " + record.getAge());
+      	}
+   	}
+}
+```
+
+Beans.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd ">
+   <!-- Initialization for data source -->
+   <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+      <property name="driverClassName" value="com.mysql.jdbc.Driver"/>
+      <property name="url" value="jdbc:mysql://localhost:3306/TEST"/>
+      <property name="username" value="root"/>
+      <property name="password" value="password"/>
+   </bean>
+
+   <!-- Initialization for TransactionManager -->
+   <bean id="transactionManager" 
+      class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+      <property name="dataSource"  ref="dataSource" />    
+   </bean>
+
+   <!-- Definition for studentJDBCTemplate bean -->
+   <bean id="studentJDBCTemplate"
+      class="com.tutorialspoint.StudentJDBCTemplate">
+      <property name="dataSource"  ref="dataSource" />
+      <property name="transactionManager"  ref="transactionManager" />    
+   </bean> 
+</beans>
+```
+
+
+
+## 声明式事务管理
+
+这种方法允许在配置的帮助下而不是源代码编程来管理事务，即可以将事务管理从事物代码中隔离出来，甚至可以只使用注解或基于配置的xml来管理事务。
+
+bean配置制定事务方法相关步骤
+
+- 使用标签创建事务处理的建议同时定义一个匹配所有方法的切入点，希望做到这些方法是事务型的并且会引用事务型的建议
+- 如果在事务型配置中包含了一个方法的名称，则创建的建议在调用方法之前就会在事务中开始执行
+- 目标方法会在try/catch 块中执行，正常结束即提交，否则回滚
+
+### 注解实现
+
+1. 在spring配置文件中配置事务管理器类
+
+```xml
+<beans>
+	<bean id="dbManager" class="org.springframework.jdbc.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.JdbcTemplate">
+        <property name="dataSource" red="dataSource"/>
+    </bean>
+
+    <bean id="dataSource" class="com.alababa.druid.poll.DruidDataSource">
+        <property name="dricerClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://localhost:3306/dbname"/>
+        <property name="username" value="root"/>
+        <property name="password" value="mypassword"/>
+    </bean>
+
+    <context:annotation-driven transaction-manager="dbManager"/>
+</beans>
+```
+
+2. 注解 @Transactional。注解到类上则类中所有方法都应用事务管理，注解到方法则只有这个方法使用事务管理
+
+   在读写数据库的代码中即可不用显式的编程写开启、提交、回归事务。
+
+#### 事务注解的属性
+
+```java
+public @interface Transactional {
+    @AliasFor("transactionManager")
+    String value() default "";
+    
+    @AliasFor("value")
+    String transactionManager() default "";
+    
+    string[] label()default {};
+    
+    Propagation propagation()default Propagation.REQUIRED;
+    // propagation: 事务的传播行为
+    
+    Isolation isolation()default Isolation.DEFAULT;
+    // Isolation：事务的隔离级别
+    
+    int timeout()default -1;
+    // 事务的超时时间
+    
+    String timeoutstring() default "";
+    
+	boolean readnly()default false;
+    // 是否只读
+    
+	Class<? extends Throwable>[]rollbackFor() default {};
+    // 什么样的异常时回滚
+    
+	String[]rollbackForClassName() default {};
+    
+	Class<? extends Throwable>[]noRollbackFor() default {};
+    
+    String[] noRollbackForClassName() default {};
+    // 异常回滚的白名单
+}
+```
+
+Propagation：
+
+```java
+package org.springframework.transaction.annotation;
+
+public enum Propagation{
+	REQUIRED( value:0), // 默认值
+	SUPPORTS( value:1),
+	MANDATORY( value: 2),
+	REQUIRES_NEW( value:3)NOT_SUPPORTED( value: 4)
+	NEVER( value:5),
+	NESTED( value:6);
+   	// 同上传播行为
+	private final int value;
+    private Propagation(int value){this.value = value; }
+	public int value(){ return this.value; }
+}
+```
+
+
+
+## 事务隔离级别
 
