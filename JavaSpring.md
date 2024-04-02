@@ -2384,7 +2384,7 @@ public interface TransactionStatus extends SavepointManager {
 }
 ```
 
-## Spring 编程式事务管理
+## 编程式事务管理
 
 即在源代码编程的帮助下管理事务，灵活但是维护起来比较难。
 
@@ -2725,7 +2725,161 @@ public enum Propagation{
 }
 ```
 
+#### 事务隔离级别
+
+MySQL 事务隔离级别：
+
+| 隔离级别                           | 脏读 | 不可重复读 | 幻读 |
+| ---------------------------------- | ---- | ---------- | ---- |
+| read uncommitted                   | √    | √          | √    |
+| read committed                     | ×    | √          | √    |
+| repeatable read（MySQL默认）       | ×    | ×          | √    |
+| serializable（排队进行，不能并发） | ×    | ×          | ×    |
+
+| 错误类型   | 描述                                                         |
+| ---------- | ------------------------------------------------------------ |
+| 脏读       | 一个事务中读取到另一个事务未提交的结果，可以读到缓存         |
+| 不可重复读 | 一个事务中两次或多次执行相同查询语句结果不一样（被另一个事务修改） |
+| 幻读       | 事务A、B开启后，事务B向数据库插入数据并提交，事务A查询不到插入的数据，在相同位置插入数据时报错。并发中都存在这个问题。 |
+
+@Transaction的属性Isolation设置事务隔离级别
+
+| isolation属性值  | 描述                                                       |
+| ---------------- | ---------------------------------------------------------- |
+| DEFAULT          | 使用数据库的默认隔离级别                                   |
+| READ_COMMITTED   | 读已提交，默认值，可防脏读                                 |
+| READ_UNCOMMITTED | 读未提交                                                   |
+| REPEATABLE_READ  | 可重复读，从事务开启时的快照中读数据，防止脏读、不可重复读 |
+| SERIALIZABLE     | 序列化，取消并发                                           |
+
+#### 事务超时问题
+
+`@Transactional(timeout = 10)`：设置事务超时时间为10秒，针对方法开始到所有的DML语句完成，即方法中最后一条语句执行完成之后方法消耗的时间不算超时计算。
+
+超时后行为：回滚。
+
+默认值为-1，即不设置超时时间
+
+#### 只读事务
+
+`Transactional(readOnly = true)`，然后方法中只允许select。作用：启动spring的优化策略提高效率。
+
+#### 事务回滚
+
+**哪些异常时回滚**：如`Transactional(rollbackFor=RuntimeException.class)`
+
+**哪些异常不会滚**：如`Transactional(nboRollbackFor=NullPointerException.class)`
+
+#### 事务的全注解开发
+
+也就是不适用配置文件，只使用注解的方式，全部使用注解完成
+
+Spring 看到 @Bean 后会调用这个被注解的方法，返回的java对象会自动仿佛IoC管理
+
+**方式**：使用一个类代替配置xml文件
+
+```java
+@Configuration
+@ComponentScan("x.y") // 参数是包名
+@EnableTransactionManagement
+public class SpringConfig {
+    
+    // Spring 看到 @Bean 后会调用这个被注解的方法，返回的java对象会自动仿佛IoC管理
+    @Bean(name="dataSource")
+    public DruidDataSource getDataSource() {
+        DruidDataSource dataSource = new DruidDataSource;
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://localhost:3306/spring6");
+        dataSource.setUsername("root");
+        dataSource.setPassword("password");
+        return dataSource;
+    }
+    
+    @Bean(name="jbdcTemplate")
+    public JdbcTemplate getJdbcTemplate(DataSource dataSource) {
+        // Spring 在调用时会自动注入
+        JdbcTemplate jdbcTemplate = new JdbcTemplate();
+        jdbcTemplate.setDataSource();
+        return jdbcTemplate;
+    }
+    
+    @Bean(name="dbManager")
+    public DataSourceTransactionManager getDataSourceTransactionManager(DataSourcedataSource){
+        DataSourceTransactionManager dbManager= new DataSourceTransactionManager();
+        dbManager.setDataSource(dataSource);
+        return dbManager;
+}
+```
 
 
-## 事务隔离级别
 
+### XML 实现
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http:/jww.springframework.org/schema/beans 
+                           http://ww.springframework,ora/schema/beans/soring-beans.xsd
+                           http: //www.springframework.org/schema/context 
+                           http://ww.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/db 
+                           http://www.springframework.org/schema/db/spring-db.xsd
+                           http: //www.springframework.org/schema/aop
+                           http://www.springframework.org/schema/aop/spring-aop.xsd">
+	<context:component-scan base-package="x.y.pkgname"/>
+    
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">			<property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://localhost:3306/spring6"/>
+        <property name="username" value="root"/>
+        <property name="password" value="root"/>
+    </bean>
+    
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="dataSource"/>
+	</bean>
+    
+    <bean id="dbManager" class="org.springframework.jdbc,datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+    
+    <db:annotation-driven transaction-manager="dbManager"/>
+    
+    <!--配置通知，具体的增强代码。-->
+	<db:advice id="dbAdvice">
+		<!--配置酒知的相关网性-->
+		<db:attributes>
+		<!--之前所讲的所有的事务属性都可以在以下标签中配置。-->
+		<db:method name="transfer" propagation="REQUIRED" rollback-for="java.lang.Throwable"/></tx:attributes>
+	</db:advice>
+    
+    
+    
+    <aop:config>
+        
+    </aop:config>
+</beans>
+```
+
+
+
+# MVC 框架
+
+Spring web MVC 框架提供了模型-视图-控制的体系结构和可以用来开发灵活、松散耦合的 web 应用程序的组件。
+
+MVC 模式使得应用程序不同方面（输入、业务、ui）的分离，同时提供了在这些元素之间的松散耦合
+
+- **模型**封装了应用程序数据，通常由POJO组成
+- **视图** 主要用于呈现模型数据，并且通常它生成客户端的浏览器可以解释的 HTML 输出。
+- **控制器** 主要用于处理用户请求，并且构建合适的模型并将其传递到视图呈现。
+
+MVC框架围绕*DispatcherServlet* 设计，用来处理所有的 HTTP 请求和响应：![NeatReader-1712055114888](./images/NeatReader-1712055114888.png)
+
+- 收到一个 HTTP 请求后，*DispatcherServlet* 根据 *HandlerMapping* 来选择并且调用适当的*控制器* 。
+- *控制器* 接受请求，并基于使用的 GET 或 POST 方法来调用适当的 service 方法。Service 方法将设置基于定义的业务逻辑的模型数据，并返回视图名称到 *DispatcherServlet* 中。
+- *DispatcherServlet* 会从 *ViewResolver* 获取帮助，为请求检取定义视图。
+- 一旦确定视图，*DispatcherServlet* 将把模型数据传递给视图，最后呈现在浏览器中。
+
+HandlerMapping、Controller 和 ViewResolver 是 *WebApplicationContext* 的一部分，*WebApplicationContext* 是带有一些对 web 应用程序必要的额外特性的 *ApplicationContext* 的扩展。
