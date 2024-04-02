@@ -35,7 +35,7 @@ for imgName in imgList:
         try:
             os.remove(os.path.join('images', imgName))
             n += 1
-            print(f'删除图片：{imgName} 成功')
+            print(f'删除：{imgName}')
         except Exception as e:
             print(f"删除图片：{imgName} 失败\n{e}")
 print("\n---------------------")
