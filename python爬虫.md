@@ -1,6 +1,6 @@
 ## http请求方式
 
-- get：直接从服务器请求内容
+- `get`：直接从服务器请求内容
 
   ```python
   import request
@@ -12,7 +12,7 @@
   print(response)
   ```
 
-- post：发送一些数据，并请求内容
+- `post`：发送一些数据，并请求内容
 
   ```python
   import request
@@ -34,7 +34,7 @@ url = 'https://movie.douban.com/j/chart/top_list?type=11&interval_id=100%3A90&ac
 response = request.post(url)
 ```
 
-url中?后的都是参数，可以对这些参数进行封装。
+`url`中`?`后的都是参数，可以对这些参数进行封装。
 
 ```python
 url = 'https://movie.douban.com/j/chart/top_list'
